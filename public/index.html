@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="id" id="html-root">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GCWH — Garment Carton &amp; Warehouse Hub</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              ink: {
+                50: "#f4f5f6",
+                100: "#e6e8eb",
+                200: "#c7cbd3",
+                300: "#9ba1ad",
+                400: "#6b7280",
+                500: "#454b57",
+                600: "#30353f",
+                700: "#20242b",
+                800: "#151920",
+                900: "#0b0d11",
+              },
+              paper: { 50: "#fcfbf9", 100: "#f4f3ef", 200: "#e8e7e0" },
+              hazard: {
+                50: "#fff8e6",
+                100: "#ffedb3",
+                300: "#ffcf3d",
+                500: "#f2a900",
+                600: "#d69200",
+                700: "#a86f00",
+              },
+              alarm: {
+                50: "#fdecea",
+                100: "#f8cec6",
+                300: "#ef8a76",
+                500: "#d43d2a",
+                600: "#b02f1f",
+                700: "#8a2417",
+              },
+              stamp: {
+                50: "#e9f5f2",
+                100: "#c7e6dd",
+                300: "#77bfae",
+                500: "#1b6e63",
+                600: "#155650",
+                700: "#103f3c",
+              },
+            },
+            fontFamily: {
+              display: ['"Space Grotesk"', "sans-serif"],
+              sans: ['"IBM Plex Sans"', "sans-serif"],
+              mono: ['"IBM Plex Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Fonts + custom design tokens -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="/css/theme.css" />
+  </head>
+  <body
+    class="bg-paper-50 dark:bg-ink-900 text-ink-800 dark:text-ink-100 antialiased min-h-screen transition-colors duration-300"
+  >
+    <div id="app" v-cloak class="min-h-screen flex flex-col">
+      <!-- Header Bar -->
+      <header-bar
+        :is-dark-mode="isDarkMode"
+        :active-tab="activeTab"
+        :current-user="currentUser"
+        @toggle-theme="toggleTheme"
+        @open-logo="showLogoModal = true"
+        @open-user-modal="showUserModal = true"
+        @open-audit-trail="showAuditTrailModal = true"
+        @logout="logout"
+        @update:active-tab="activeTab = $event"
+      ></header-bar>
+
+      <main
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6"
+      >
+        <!-- NOTIFICATION BANNER -->
+        <transition
+          enter-active-class="transition duration-300 ease-out"
+          enter-from-class="opacity-0 -translate-y-2"
+          leave-active-class="transition duration-200 ease-in"
+          leave-to-class="opacity-0 -translate-y-2"
+        >
+          <div
+            v-if="message"
+            class="p-4 rounded-xl bg-stamp-50 dark:bg-stamp-700/20 text-stamp-700 dark:text-stamp-300 border border-stamp-200 dark:border-stamp-700 shadow-sm flex items-center justify-between no-print"
+          >
+            <div
+              class="flex items-center gap-2 text-sm font-data font-semibold"
+            >
+              <span
+                class="stamp border-stamp-600 text-stamp-600 dark:text-stamp-300"
+                >OK</span
+              >
+              <span>{{ message }}</span>
+            </div>
+            <button
+              @click="message = ''"
+              class="text-stamp-500 hover:text-stamp-700 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        </transition>
+
+        <!-- KARTU STATISTIK (Disembunyikan saat Print) -->
+        <div class="no-print">
+          <stats-cards
+            :stats="stats"
+            :critical-count="criticalPOs.length"
+            @toggle-urgent="filterUrgentOnly = !filterUrgentOnly"
+          ></stats-cards>
+        </div>
+
+        <div class="no-print">
+          <critical-panel
+            :critical-pos="criticalPOs"
+            :filter-urgent-only="filterUrgentOnly"
+            @toggle-urgent="filterUrgentOnly = !filterUrgentOnly"
+            @open-inspection="openInspectionModalForPO"
+          ></critical-panel>
+        </div>
+
+        <div class="no-print">
+          <filter-toolbar
+            :search="searchQuery"
+            :buyer="selectedBuyerFilter"
+            :status="selectedStatusFilter"
+            :buyers="buyers"
+            :show-reset="hasActiveFilters"
+            @update:search="searchQuery = $event"
+            @update:buyer="selectedBuyerFilter = $event"
+            @update:status="selectedStatusFilter = $event"
+            @reset="resetFilters"
+          ></filter-toolbar>
+        </div>
+
+        <!-- TAB 1: HELPER BOY DASHBOARD -->
+        <div v-if="activeTab === 'helper'" class="space-y-4 no-print">
+          <div class="flex justify-between items-center">
+            <h2
+              class="font-display text-lg font-bold text-ink-900 dark:text-white"
+            >
+              Penempatan Rak &amp; Fisik Karton Gudang
+            </h2>
+            <span class="text-xs font-data text-ink-400 font-medium"
+              >Menampilkan {{ filteredPOs.length }} PO</span
+            >
+          </div>
+
+          <!-- SKELETON LOADER KETIKA MEMUAT DATA -->
+          <skeleton-loader v-if="isLoading"></skeleton-loader>
+
+          <!-- KONDISI KETIKA DATA KOSONG -->
+          <div
+            v-else-if="filteredPOs.length === 0"
+            class="bg-white dark:bg-ink-800 rounded-2xl p-12 text-center border border-ink-200 dark:border-ink-600 shadow-sm"
+          >
+            <p class="tag border-2 text-ink-400 inline-flex mb-3">KOSONG</p>
+            <p class="text-ink-600 dark:text-ink-300 font-semibold">
+              Tidak ada PO yang ditemukan
+            </p>
+            <p class="text-xs text-ink-400 mt-1">
+              Coba sesuaikan kata kunci pencarian atau filter Buyer Anda.
+            </p>
+          </div>
+
+          <!-- GRID DATA ASLI -->
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <po-card
+              v-for="po in filteredPOs"
+              :key="po.id"
+              :po="po"
+              @open-placement="openPlacementModal"
+            ></po-card>
+          </div>
+        </div>
+
+        <!-- TAB 2: ADMIN RECORD DASHBOARD -->
+        <div v-if="activeTab === 'admin'" class="space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Form Input Admin (Disembunyikan saat Print) -->
+            <div class="no-print">
+              <admin-form
+                :buyers="buyers"
+                :form="form"
+                @submit="submitPO"
+              ></admin-form>
+            </div>
+
+            <!-- Tabel Master PO (INI YANG AKAN TAMPIL BERSIH SAAT DICETAK) -->
+            <po-table
+              :pos="filteredPOs"
+              @edit="openEditModal"
+              @delete="deletePO"
+              @status-change="handleStatusChange"
+              @open-inspection="openInspectionModalForPO"
+              @export-excel="exportToExcel"
+              @print-pdf="printReport"
+            ></po-table>
+          </div>
+        </div>
+      </main>
+
+      <!-- MODALS -->
+      <inspection-modal
+        :show="showInspectionModal"
+        :inspection-form="inspectionForm"
+        @close="showInspectionModal = false"
+        @submit="submitInspection"
+      ></inspection-modal>
+
+      <logo-modal
+        :show="showLogoModal"
+        :buyers="buyers"
+        @close="showLogoModal = false"
+        @update-logo="openUpdateLogoPrompt"
+      ></logo-modal>
+
+      <edit-modal
+        :show="showEditModal"
+        :buyers="buyers"
+        :edit-form="editForm"
+        @close="showEditModal = false"
+        @save="saveEditPO"
+      ></edit-modal>
+
+      <placement-modal
+        :show="showPlacementModal"
+        :active-po="activePO"
+        :active-color="activeColor"
+        :placement-form="placementForm"
+        @close="showPlacementModal = false"
+        @save="savePlacement"
+      ></placement-modal>
+
+      <audit-trail-modal
+        :show="showAuditTrailModal"
+        @close="showAuditTrailModal = false"
+      ></audit-trail-modal>
+
+      <!-- MODAL LOGIN & USER MANAGEMENT -->
+      <login-modal
+        :show="showLoginModal"
+        @login-success="onLoginSuccess"
+      ></login-modal>
+
+      <user-management-modal
+        :show="showUserModal"
+        @close="showUserModal = false"
+      ></user-management-modal>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>
