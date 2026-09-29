@@ -21,7 +21,10 @@ export default {
     async fetchLogs() {
       this.isLoading = true;
       try {
-        const res = await fetch("/api/audit-logs");
+        const token = localStorage.getItem("gcwh_token");
+        const headers = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const res = await fetch("/api/logs", { headers });
         if (res.ok) {
           this.logs = await res.json();
         }

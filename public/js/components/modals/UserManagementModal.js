@@ -7,7 +7,7 @@ export default {
   data() {
     return {
       users: [],
-      form: { username: "", password: "", role: "helper", fullname: "" },
+      form: { username: "", password: "", role: "helper", full_name: "" },
       message: "",
       errorMsg: "",
     };
@@ -34,7 +34,7 @@ export default {
                 <form @submit.prevent="saveUser" class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
                     <h4 class="text-xs font-bold uppercase text-slate-600 dark:text-slate-300">Tambah Akun Baru</h4>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" v-model="form.fullname" required placeholder="Nama Lengkap" class="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border rounded-lg dark:text-white">
+                        <input type="text" v-model="form.full_name" required placeholder="Nama Lengkap" class="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border rounded-lg dark:text-white">
                         <input type="text" v-model="form.username" required placeholder="Username" class="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border rounded-lg dark:text-white">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -52,7 +52,7 @@ export default {
                     <h4 class="text-xs font-bold uppercase text-slate-400">Daftar Akun Terdaftar</h4>
                     <div v-for="u in users" :key="u.id" class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs">
                         <div>
-                            <p class="font-bold text-slate-900 dark:text-white">{{ u.fullname }} <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold" :class="u.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-700'">{{ u.role }}</span></p>
+                            <p class="font-bold text-slate-900 dark:text-white">{{ u.full_name }} <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold" :class="u.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-700'">{{ u.role }}</span></p>
                             <p class="text-slate-400 text-[11px]">Username: <b>{{ u.username }}</b></p>
                         </div>
                         <button v-if="u.username !== 'admin'" @click="deleteUser(u.id)" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-1 text-xs">🗑️</button>
@@ -66,15 +66,22 @@ export default {
   methods: {
     async fetchUsers() {
       try {
-        const res = await fetch("/api/users");
+        const token = localStorage.getItem("gcwh_token");
+        const res = await fetch("/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) this.users = await res.json();
       } catch (err) {}
     },
     async saveUser() {
       try {
+        const token = localStorage.getItem("gcwh_token");
         const res = await fetch("/api/users", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify(this.form),
         });
         const data = await res.json();
@@ -84,7 +91,7 @@ export default {
             username: "",
             password: "",
             role: "helper",
-            fullname: "",
+            full_name: "",
           };
           this.fetchUsers();
           setTimeout(() => (this.message = ""), 3000);
@@ -96,7 +103,11 @@ export default {
     },
     async deleteUser(id) {
       if (confirm("Yakin ingin menghapus akun ini?")) {
-        const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+        const token = localStorage.getItem("gcwh_token");
+        const res = await fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) this.fetchUsers();
       }
     },

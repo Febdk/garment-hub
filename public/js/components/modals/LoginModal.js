@@ -32,13 +32,13 @@ export default {
                 <form @submit.prevent="handleLogin" class="space-y-3.5">
                     <div>
                         <label class="block text-xs font-data font-bold text-ink-600 dark:text-ink-300 mb-1 uppercase">Username</label>
-                        <input type="text" v-model="form.username" required placeholder="Contoh: admin atau helper" 
+                        <input type="text" v-model="form.username" required placeholder="Masukkan username anda"
                                class="w-full px-3 py-2 text-xs font-sans bg-ink-50 dark:bg-ink-900 border border-ink-300 dark:border-ink-700 rounded-xl focus:ring-2 focus:ring-hazard-500 focus:outline-none dark:text-white">
                     </div>
 
                     <div>
                         <label class="block text-xs font-data font-bold text-ink-600 dark:text-ink-300 mb-1 uppercase">Password</label>
-                        <input type="password" v-model="form.password" required placeholder="••••••••" 
+                        <input type="password" v-model="form.password" required placeholder="••••••••"
                                class="w-full px-3 py-2 text-xs font-sans bg-ink-50 dark:bg-ink-900 border border-ink-300 dark:border-ink-700 rounded-xl focus:ring-2 focus:ring-hazard-500 focus:outline-none dark:text-white">
                     </div>
 
@@ -52,7 +52,7 @@ export default {
                 </form>
 
                 <div class="pt-2 border-t border-ink-100 dark:border-ink-700 text-[11px] font-data text-center text-ink-400">
-                    Default: Admin (<code class="text-hazard-500 font-mono">admin / admin123</code>)
+                    🔒 Autentikasi aman (JWT + bcrypt)
                 </div>
             </div>
         </div>
@@ -69,6 +69,8 @@ export default {
         const data = await res.json();
         if (res.ok) {
           this.errorMsg = "";
+          // Simpan JWT token dan user data
+          localStorage.setItem("gcwh_token", data.token);
           localStorage.setItem("gcwh_user", JSON.stringify(data.user));
           this.$emit("login-success", data.user);
         } else {

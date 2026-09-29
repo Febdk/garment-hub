@@ -1,45 +1,82 @@
+// ── API Client dengan JWT Authorization Header ─────────────────────
+// Setiap request yang membutuhkan autentikasi akan menyertakan
+// header `Authorization: Bearer <token>` secara otomatis.
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("gcwh_token");
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+// Wrapper fetch yang otomatis handle 401/403 (token expired/invalid)
+async function authFetch(url, options = {}) {
+  if (!options.headers) {
+    options.headers = getAuthHeaders();
+  }
+  const res = await fetch(url, options);
+
+  // Jika token expired/invalid, redirect ke login
+  if (res.status === 401 || res.status === 403) {
+    const data = await res.json().catch(() => ({}));
+    // Jangan redirect jika ini adalah login request itu sendiri
+    if (!url.includes("/api/login")) {
+      localStorage.removeItem("gcwh_token");
+      localStorage.removeItem("gcwh_user");
+      window.dispatchEvent(new CustomEvent("gcwh-session-expired", { detail: data.error }));
+    }
+  }
+
+  return res;
+}
+
 export const getBuyers = () => fetch("/api/buyers");
 
-export const getPOs = () => fetch("/api/data");
+export const getPOs = () =>
+  authFetch("/api/data");
 
-export const getStats = () => fetch("/api/stats");
+export const getStats = () =>
+  authFetch("/api/stats");
 
 export const createPO = (payload) =>
-  fetch("/api/po", {
+  authFetch("/api/po", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
 export const updatePO = (id, payload) =>
-  fetch(`/api/po/${id}`, {
+  authFetch(`/api/po/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
 export const updatePOStatus = (id, payload) =>
-  fetch(`/api/po/${id}/status`, {
+  authFetch(`/api/po/${id}/status`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
 export const updateColorPlacement = (payload) =>
-  fetch("/api/color-placement", {
+  authFetch("/api/color-placement", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
 export const updateBuyerLogo = (payload) =>
-  fetch("/api/buyers/logo", {
+  authFetch("/api/buyers/logo", {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
-export const removePO = (id) => fetch(`/api/po/${id}`, { method: "DELETE" });
+export const removePO = (id) =>
+  authFetch(`/api/po/${id}`, { method: "DELETE", headers: getAuthHeaders() });
 
 export const loginUser = (payload) =>
   fetch("/api/login", {
@@ -48,21 +85,28 @@ export const loginUser = (payload) =>
     body: JSON.stringify(payload),
   });
 
-export const getUsers = () => fetch("/api/users");
+export const getUsers = () =>
+  authFetch("/api/users", { headers: getAuthHeaders() });
 
 export const createUser = (payload) =>
-  fetch("/api/users", {
+  authFetch("/api/users", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
 export const updateUser = (id, payload) =>
-  fetch(`/api/users/${id}`, {
+  authFetch(`/api/users/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
 export const removeUser = (id) =>
-  fetch(`/api/users/${id}`, { method: "DELETE" });
+  authFetch(`/api/users/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+
+export const verifyToken = () =>
+  authFetch("/api/verify-token", { headers: getAuthHeaders() });
+
+export const getLogs = () =>
+  authFetch("/api/audit-logs", { headers: getAuthHeaders() });

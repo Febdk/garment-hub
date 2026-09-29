@@ -3,6 +3,7 @@ const { createApp, ref, computed, onMounted } = Vue;
 import { DEFAULT_BUYERS } from "./constants.js";
 import { isUrgentPO } from "./utils.js";
 import * as api from "./api.js";
+import { verifyToken } from "./api.js";
 
 import HeaderBar from "./components/HeaderBar.js";
 import StatsCards from "./components/StatsCards.js";
@@ -48,6 +49,7 @@ const app = createApp({
     const showAuditTrailModal = ref(false); // State untuk Modal Audit Trail
 
     const logout = () => {
+      localStorage.removeItem("gcwh_token");
       localStorage.removeItem("gcwh_user");
       currentUser.value = null;
       showLoginModal.value = true;
@@ -160,12 +162,32 @@ const app = createApp({
       isLoading.value = false;
     };
 
-    onMounted(() => {
+    onMounted(async () => {
       if (isDarkMode.value) {
         document.documentElement.classList.add("dark");
       }
-      if (currentUser.value) {
-        fetchData();
+
+      // Listen for session-expired events from api.js
+      window.addEventListener("gcwh-session-expired", () => {
+        logout();
+      });
+
+      // Verify JWT token on page load
+      if (currentUser.value && localStorage.getItem("gcwh_token")) {
+        try {
+          const res = await verifyToken();
+          if (res.ok) {
+            fetchData();
+          } else {
+            // Token invalid/expired → force re-login
+            logout();
+          }
+        } catch (e) {
+          logout();
+        }
+      } else if (currentUser.value) {
+        // User data exists but no token → force re-login
+        logout();
       }
     });
 
