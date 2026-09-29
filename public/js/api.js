@@ -1,6 +1,6 @@
 // ── API Client dengan JWT Authorization Header ─────────────────────
-// Setiap request yang membutuhkan autentikasi akan menyertakan
-// header `Authorization: Bearer <token>` secara otomatis.
+// Ganti URL di bawah ini dengan Domain Railway Backend kamu
+const API_BASE_URL = "garment-hub-production-c0a6.up.railway.app";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("gcwh_token");
@@ -16,7 +16,7 @@ async function authFetch(url, options = {}) {
   if (!options.headers) {
     options.headers = getAuthHeaders();
   }
-  const res = await fetch(url, options);
+  const res = await fetch(`${API_BASE_URL}${url}`, options);
 
   // Jika token expired/invalid, redirect ke login
   if (res.status === 401 || res.status === 403) {
@@ -25,20 +25,20 @@ async function authFetch(url, options = {}) {
     if (!url.includes("/api/login")) {
       localStorage.removeItem("gcwh_token");
       localStorage.removeItem("gcwh_user");
-      window.dispatchEvent(new CustomEvent("gcwh-session-expired", { detail: data.error }));
+      window.dispatchEvent(
+        new CustomEvent("gcwh-session-expired", { detail: data.error }),
+      );
     }
   }
 
   return res;
 }
 
-export const getBuyers = () => fetch("/api/buyers");
+export const getBuyers = () => fetch(`${API_BASE_URL}/api/buyers`);
 
-export const getPOs = () =>
-  authFetch("/api/data");
+export const getPOs = () => authFetch("/api/data");
 
-export const getStats = () =>
-  authFetch("/api/stats");
+export const getStats = () => authFetch("/api/stats");
 
 export const createPO = (payload) =>
   authFetch("/api/po", {
@@ -79,7 +79,7 @@ export const removePO = (id) =>
   authFetch(`/api/po/${id}`, { method: "DELETE", headers: getAuthHeaders() });
 
 export const loginUser = (payload) =>
-  fetch("/api/login", {
+  fetch(`${API_BASE_URL}/api/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -103,7 +103,10 @@ export const updateUser = (id, payload) =>
   });
 
 export const removeUser = (id) =>
-  authFetch(`/api/users/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+  authFetch(`/api/users/${id}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
 
 export const verifyToken = () =>
   authFetch("/api/verify-token", { headers: getAuthHeaders() });
