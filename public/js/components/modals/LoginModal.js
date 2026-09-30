@@ -61,11 +61,14 @@ export default {
     async handleLogin() {
       this.isLoading = true;
       try {
-        const res = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(this.form),
-        });
+        const res = await fetch(
+          "https://garment-hub-production-c0a6.up.railway.app/api/login",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(this.form),
+          },
+        );
         const data = await res.json();
         if (res.ok) {
           this.errorMsg = "";
