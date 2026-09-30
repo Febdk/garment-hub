@@ -1,6 +1,6 @@
 // ── API Client dengan JWT Authorization Header ─────────────────────
 // Ganti URL di bawah ini dengan Domain Railway Backend kamu
-const API_BASE_URL = "garment-hub-production-c0a6.up.railway.app";
+const API_BASE_URL = "https://garment-hub-production-c0a6.up.railway.app";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("gcwh_token");
