@@ -38,7 +38,11 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "8h";
 // ── CORS (#5) ───────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:3000", "http://127.0.0.1:3000"];
+  : [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "https://garment-hub.netlify.app",
+    ];
 
 app.use(
   cors({
@@ -726,7 +730,7 @@ app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ── Start Server ────────────────────────────────____________________
+// ── Start Server ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server berjalan aman di http://localhost:${PORT}`);
