@@ -81,7 +81,7 @@ export default {
         </div>
 
         <div class="overflow-x-auto rounded-xl border border-ink-200 dark:border-ink-600">
-          <table class="w-full text-left border-collapse text-xs font-mono">
+          <table class="po-table w-full text-left border-collapse text-xs font-mono">
             <thead>
               <tr class="bg-paper-50 dark:bg-ink-900/60 border-b border-ink-200 dark:border-ink-600 text-[10px] font-mono font-bold text-ink-400 uppercase tracking-wider">
                 <th class="p-2.5">Buyer / PO &amp; Style</th>
@@ -94,7 +94,7 @@ export default {
               <tr v-if="pos.length === 0">
                 <td colspan="4" class="p-6 text-center text-ink-400 font-mono">Tidak ada data PO yang sesuai.</td>
               </tr>
-              <tr v-for="po in pos" :key="po.id" class="hover:bg-paper-50/80 dark:hover:bg-ink-700/20 transition align-top">
+              <tr v-for="po in pos" :key="po.id" class="po-row hover:bg-paper-50/80 dark:hover:bg-ink-700/20 transition align-top">
                 <td class="p-2.5 space-y-0.5">
                   <div class="flex items-center gap-1.5">
                     <img v-if="po.buyer_logo" :src="po.buyer_logo" class="w-4 h-4 object-contain no-print" @error="$event.target.style.display='none'" />
@@ -112,7 +112,7 @@ export default {
                   </div>
                 </td>
 
-                <td class="p-2.5 space-y-1 font-mono">
+                <td data-label="Warna &amp; rak" class="p-2.5 space-y-1 font-mono">
                   <div v-for="c in po.colors" :key="c.id" class="text-[11px] py-0.5">
                     <span class="font-bold text-ink-800 dark:text-ink-200">Col {{ c.color_code }}</span>:
                     <span class="font-semibold text-ink-600 dark:text-ink-300">{{ c.total_qty }} Ktn</span>
@@ -120,7 +120,7 @@ export default {
                   </div>
                 </td>
 
-                <td class="p-2.5 space-y-1.5 font-mono">
+                <td data-label="Status" class="p-2.5 space-y-1.5 font-mono">
                   <span :class="getStatusBadge(po.status)" class="text-[10px] font-bold uppercase tracking-wider">{{ po.status }}</span>
 
                   <div v-if="po.status === 'Inspection Internal'" class="text-[10px] text-indigo-700 dark:text-indigo-300 font-medium bg-indigo-50/80 dark:bg-indigo-950/40 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/60 space-y-0.5">
@@ -148,7 +148,7 @@ export default {
                   </select>
                 </td>
 
-                <td class="p-2.5 text-center align-middle no-print">
+                <td class="po-actions p-2.5 text-center align-middle no-print">
                   <div class="flex items-center justify-center gap-1.5 font-mono">
                     <button
                       type="button"

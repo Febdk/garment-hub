@@ -327,3 +327,244 @@ html body table tbody tr:hover {
     background: transparent !important;
   }
 }
+
+/* ==========================================================
+   v3 — KARTON GUDANG + MOBILE-FIRST
+   ========================================================== */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+html body button,
+html body select {
+  touch-action: manipulation;
+}
+
+/* Latar kardus bergaris (corrugated) — hanya mode terang */
+html:not(.dark) body {
+  background-color: #e8e3d5;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(120, 90, 40, 0.05) 0 2px,
+    transparent 2px 7px
+  );
+}
+html:not(.dark) body .filter-toolbar,
+html:not(.dark) body stats-cards > div > * {
+  background-color: #fffdf8;
+}
+
+@media (max-width: 767px) {
+  /* Ruang untuk bar navigasi bawah */
+  html body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  /* Header ringkas, tidak lengket (tab pindah ke bawah) */
+  html body header.sticky {
+    position: relative;
+  }
+  html body header > div:first-child {
+    padding-top: 0.75rem;
+    padding-bottom: 0.6rem;
+    gap: 0.6rem;
+    align-items: stretch;
+  }
+  html body header > div:first-child > div:first-child {
+    justify-content: flex-start;
+  }
+  html body .tear-divider,
+  html body .hdr-sub {
+    display: none;
+  }
+  html body header div.w-11 {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.15rem;
+  }
+  html body header h1.font-display {
+    font-size: 1.5rem;
+  }
+  html body .header-actions {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 6px;
+    justify-content: space-between;
+  }
+  html body .user-pill {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  html body .user-pill > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  html body .header-actions > button {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+  html body .btn-label {
+    display: none;
+  }
+
+  /* Tab Helper / Admin = bar navigasi bawah */
+  html body .tab-switch {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 0 0 env(safe-area-inset-bottom);
+    border: 0;
+    border-top: 3px solid var(--hazard);
+    border-radius: 0;
+    background: #0b0d11;
+    box-shadow: none;
+  }
+  html body .tab-btn {
+    min-height: 56px;
+    border-radius: 0;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+
+  /* Input 16px: iOS tidak zoom saat fokus */
+  html body input,
+  html body select,
+  html body textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  /* Filter: dua select berdampingan, label disembunyikan */
+  html body .filter-toolbar {
+    padding: 0.75rem;
+    gap: 0.6rem;
+  }
+  html body .filter-toolbar .relative {
+    width: 100%;
+  }
+  html body .filter-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  html body .filter-controls label {
+    display: none;
+  }
+  html body .filter-controls > div {
+    width: 100%;
+  }
+  html body .filter-controls select {
+    width: 100%;
+  }
+  html body .filter-reset {
+    grid-column: 1 / -1;
+    min-height: 40px;
+    margin: 0;
+    text-align: right;
+  }
+
+  /* Statistik: tag disembunyikan, angka lebih fokus */
+  html body stats-cards .tag {
+    display: none;
+  }
+  html body stats-cards > div > * {
+    padding: 0.75rem;
+  }
+
+  /* Tombol utama helper (Rak) mudah ditekan */
+  html body button.w-full.bg-hazard-500 {
+    min-height: 46px;
+    font-size: 0.85rem;
+  }
+
+  /* Tabel Admin → kartu per PO */
+  html body .po-table thead {
+    display: none;
+  }
+  html body .po-table,
+  html body .po-table tbody,
+  html body .po-table tr,
+  html body .po-table td {
+    display: block;
+    width: 100%;
+  }
+  html body .po-table tbody tr.po-row {
+    background: #fffdf8;
+    border: 1.5px solid var(--ink);
+    margin-bottom: 0.75rem;
+  }
+  html.dark body .po-table tbody tr.po-row {
+    background: #151920;
+    border-color: #454b57;
+  }
+  html body .po-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px dashed rgba(107, 114, 128, 0.4);
+  }
+  html body .po-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+  }
+  html body .po-actions {
+    border-bottom: 0;
+  }
+  html body .po-actions > div {
+    gap: 0.5rem;
+  }
+  html body .po-actions button {
+    flex: 1;
+    min-height: 44px;
+    font-size: 0.8rem;
+  }
+
+  /* Modal = bottom sheet */
+  html body .fixed.inset-0 {
+    align-items: flex-end;
+    padding: 0;
+  }
+  html body .fixed.inset-0 > div {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    overflow-y: auto;
+    margin: 0;
+    border-radius: 6px 6px 0 0;
+    box-shadow: none;
+    border-bottom-width: 0;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media print {
+  html body {
+    background: #fff !important;
+    padding-bottom: 0 !important;
+  }
+  html body .po-table,
+  html body .po-table tbody,
+  html body .po-table tr {
+    display: revert;
+    width: auto;
+  }
+  html body .po-table td {
+    display: table-cell;
+    width: auto;
+  }
+  html body .po-table thead {
+    display: table-header-group;
+  }
+}

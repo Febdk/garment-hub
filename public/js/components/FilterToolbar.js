@@ -14,7 +14,7 @@ export default {
     return { STATUS_OPTIONS };
   },
   template: `
-    <div class="bg-white dark:bg-ink-800 p-4 rounded-2xl border border-ink-200 dark:border-ink-600 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-center">
+    <div class="filter-toolbar bg-white dark:bg-ink-800 p-4 rounded-2xl border border-ink-200 dark:border-ink-600 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-center">
       <div class="relative w-full md:w-80">
         <input
           type="text"
@@ -25,7 +25,7 @@ export default {
         />
       </div>
 
-      <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+      <div class="filter-controls flex flex-wrap items-center gap-3 w-full md:w-auto">
         <div class="flex items-center gap-2 w-full sm:w-auto">
           <label class="text-[11px] font-data font-bold text-ink-400 uppercase whitespace-nowrap">Buyer:</label>
           <select
@@ -54,7 +54,7 @@ export default {
           v-if="showReset"
           type="button"
           @click="$emit('reset')"
-          class="text-xs text-alarm-600 dark:text-alarm-300 font-data font-semibold hover:underline ml-auto"
+          class="filter-reset text-xs text-alarm-600 dark:text-alarm-300 font-data font-semibold hover:underline ml-auto"
         >
           Reset Filter
         </button>
