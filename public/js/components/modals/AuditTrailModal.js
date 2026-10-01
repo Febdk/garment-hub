@@ -24,7 +24,10 @@ export default {
         const token = localStorage.getItem("gcwh_token");
         const headers = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const res = await fetch("/api/logs", { headers });
+        const res = await fetch(
+          "https://garment-hub-production-c0a6.up.railway.app/api/logs",
+          { headers },
+        );
         if (res.ok) {
           this.logs = await res.json();
         }

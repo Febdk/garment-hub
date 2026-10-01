@@ -67,23 +67,29 @@ export default {
     async fetchUsers() {
       try {
         const token = localStorage.getItem("gcwh_token");
-        const res = await fetch("/api/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          "https://garment-hub-production-c0a6.up.railway.app/api/users",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (res.ok) this.users = await res.json();
       } catch (err) {}
     },
     async saveUser() {
       try {
         const token = localStorage.getItem("gcwh_token");
-        const res = await fetch("/api/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+        const res = await fetch(
+          "https://garment-hub-production-c0a6.up.railway.app/api/users",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(this.form),
           },
-          body: JSON.stringify(this.form),
-        });
+        );
         const data = await res.json();
         if (res.ok) {
           this.message = data.message;
@@ -104,10 +110,13 @@ export default {
     async deleteUser(id) {
       if (confirm("Yakin ingin menghapus akun ini?")) {
         const token = localStorage.getItem("gcwh_token");
-        const res = await fetch(`/api/users/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          `https://garment-hub-production-c0a6.up.railway.app/api/users/${id}`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (res.ok) this.fetchUsers();
       }
     },
