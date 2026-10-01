@@ -128,3 +128,202 @@ body {
     padding: 0 !important;
   }
 }
+
+/* ==========================================================
+   TAMPILAN INDUSTRIAL / LOGISTIK (v2)
+   Hanya lapisan visual. Selector memakai spesifisitas lebih tinggi
+   dari utilitas Tailwind CDN, sehingga template tidak perlu diubah.
+   ========================================================== */
+:root {
+  --ink: #151920;
+  --hazard: #f2a900;
+  --alarm: #d43d2a;
+  --stamp: #1b6e63;
+}
+
+body {
+  font-feature-settings: "tnum" 1;
+}
+
+/* Fokus keyboard yang jelas di semua kontrol */
+html body :focus-visible {
+  outline: 2px solid var(--hazard);
+  outline-offset: 2px;
+}
+
+/* Sudut tegas: potongan kardus, bukan kartu SaaS membulat */
+html body [class*="rounded-"]:not(.rounded-full) {
+  border-radius: 2px;
+}
+html body .tag,
+html body .stamp {
+  border-radius: 0;
+}
+.tag {
+  border: 1.5px solid currentColor;
+  letter-spacing: 0.04em;
+}
+
+/* Panel/kartu/modal = label kargo: garis tegas + bayangan keras */
+html body [class*="rounded-2xl"] {
+  border-width: 1.5px;
+  box-shadow: 3px 3px 0 rgba(21, 25, 32, 0.9);
+}
+html:not(.dark) body [class*="rounded-2xl"] {
+  border-color: var(--ink);
+}
+html.dark body [class*="rounded-2xl"] {
+  box-shadow: 3px 3px 0 #000;
+}
+html body .fixed [class*="rounded-2xl"] {
+  box-shadow: 6px 6px 0 rgba(21, 25, 32, 0.95);
+}
+
+/* Kontrol input */
+html body input:not([type="checkbox"]):not([type="radio"]),
+html body select,
+html body textarea {
+  border-width: 1.5px;
+  border-radius: 2px;
+}
+html body input:focus,
+html body select:focus,
+html body textarea:focus {
+  border-color: var(--hazard);
+}
+
+/* Tombol: terasa ditekan */
+html body button:not(:disabled):active {
+  transform: translate(1px, 1px);
+}
+
+/* Header: satu-satunya aksen berani = garis peringatan hazard */
+html body header.sticky {
+  box-shadow: none;
+}
+html body header.sticky::after {
+  content: "";
+  display: block;
+  height: 6px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--hazard) 0 10px,
+    #0b0d11 10px 20px
+  );
+}
+html body header div.w-11 {
+  box-shadow:
+    inset 0 0 0 2px #0b0d11,
+    inset 0 0 0 4px var(--hazard);
+  font-size: 1.35rem;
+}
+html body h1.font-display {
+  font-size: 1.75rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+html body h2.font-display {
+  letter-spacing: 0.02em;
+  font-size: 1.4rem;
+}
+
+/* Angka statistik: besar dan rapat seperti nomor di label */
+html body h3.font-display {
+  font-size: 2.5rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+html body stats-cards > div > * {
+  border-left-width: 6px;
+}
+html body stats-cards > div > :nth-child(1) {
+  border-left-color: var(--ink) !important;
+}
+html body stats-cards > div > :nth-child(2) {
+  border-left-color: var(--hazard) !important;
+}
+html body stats-cards > div > :nth-child(3) {
+  border-left-color: var(--stamp) !important;
+}
+html body stats-cards > div > :nth-child(4) {
+  border-left-color: var(--alarm) !important;
+}
+
+/* Tabel padat ala manifest gudang */
+html body table {
+  border-collapse: collapse;
+}
+html body table thead th {
+  background: #151920;
+  color: #f4f3ef;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 3px solid var(--hazard);
+}
+html body table td {
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(107, 114, 128, 0.25);
+}
+html body table tbody tr:nth-child(even) {
+  background: rgba(21, 25, 32, 0.035);
+}
+html.dark body table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+html body table tbody tr:hover {
+  background: rgba(242, 169, 0, 0.14);
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  html body stats-cards > div {
+    gap: 0.5rem;
+  }
+  html body h3.font-display {
+    font-size: 1.9rem;
+  }
+  html body header button {
+    min-height: 40px;
+  }
+  html body input,
+  html body select {
+    min-height: 42px;
+  }
+  html body table td,
+  html body table thead th {
+    padding: 0.45rem 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
+  }
+  html body button:not(:disabled):active {
+    transform: none;
+  }
+}
+
+/* Cetak tetap bersih */
+@media print {
+  html body [class*="rounded-2xl"] {
+    box-shadow: none !important;
+    border-width: 1px;
+  }
+  html body header.sticky::after {
+    display: none;
+  }
+  html body table thead th {
+    background: #f2f2f2 !important;
+    color: #000 !important;
+    border-bottom: 1px solid #333 !important;
+  }
+  html body table tbody tr:nth-child(even),
+  html body table tbody tr:hover {
+    background: transparent !important;
+  }
+}

@@ -52,7 +52,7 @@
               },
             },
             fontFamily: {
-              display: ['"Space Grotesk"', "sans-serif"],
+              display: ['"Barlow Condensed"', '"Arial Narrow"', "sans-serif"],
               sans: ['"IBM Plex Sans"', "sans-serif"],
               mono: ['"IBM Plex Mono"', "monospace"],
             },
@@ -62,11 +62,16 @@
     </script>
 
     <!-- Vue 3 -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <!-- Fonts + custom design tokens -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+    <meta name="theme-color" content="#0b0d11" />
     <link rel="stylesheet" href="/css/theme.css" />
   </head>
   <body
@@ -252,6 +257,7 @@
       <audit-trail-modal
         :show="showAuditTrailModal"
         @close="showAuditTrailModal = false"
+        a
       ></audit-trail-modal>
 
       <!-- MODAL LOGIN & USER MANAGEMENT -->

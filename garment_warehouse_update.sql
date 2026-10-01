@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 30 Sep 2026 pada 21.05
+-- Waktu pembuatan: 01 Okt 2026 pada 17.43
 -- Versi server: 10.4.32-MariaDB
 -- Versi PHP: 8.2.12
 
@@ -157,8 +157,8 @@ CREATE TABLE `purchase_orders` (
   `buyer` varchar(100) NOT NULL,
   `po_number` varchar(100) NOT NULL,
   `style_code` varchar(100) NOT NULL,
-  `color_code` varchar(100) NOT NULL,
-  `total_qty` int(11) NOT NULL,
+  `color_code` varchar(100) DEFAULT NULL,
+  `total_qty` int(11) DEFAULT 0,
   `ex_fty_date` date NOT NULL,
   `status` varchar(50) DEFAULT 'Pending (Belum Dicek)',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
