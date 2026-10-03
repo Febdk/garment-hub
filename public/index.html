@@ -135,75 +135,17 @@
           ></stats-cards>
         </div>
 
-        <div class="no-print">
-          <critical-panel
-            :critical-pos="criticalPOs"
-            :filter-urgent-only="filterUrgentOnly"
-            @toggle-urgent="filterUrgentOnly = !filterUrgentOnly"
-            @open-inspection="openInspectionModalForPO"
-          ></critical-panel>
-        </div>
-
-        <div class="no-print">
-          <filter-toolbar
-            :search="searchQuery"
-            :buyer="selectedBuyerFilter"
-            :status="selectedStatusFilter"
-            :buyers="buyers"
-            :show-reset="hasActiveFilters"
-            @update:search="searchQuery = $event"
-            @update:buyer="selectedBuyerFilter = $event"
-            @update:status="selectedStatusFilter = $event"
-            @reset="resetFilters"
-          ></filter-toolbar>
-        </div>
-
-        <!-- TAB 1: HELPER BOY DASHBOARD -->
-        <div v-if="activeTab === 'helper'" class="space-y-4 no-print">
-          <div class="flex justify-between items-center">
-            <h2
-              class="font-display text-lg font-bold text-ink-900 dark:text-white"
-            >
-              Penempatan Rak &amp; Fisik Karton Gudang
-            </h2>
-            <span class="text-xs font-data text-ink-400 font-medium"
-              >Menampilkan {{ filteredPOs.length }} PO</span
-            >
-          </div>
-
-          <!-- SKELETON LOADER KETIKA MEMUAT DATA -->
-          <skeleton-loader v-if="isLoading"></skeleton-loader>
-
-          <!-- KONDISI KETIKA DATA KOSONG -->
-          <div
-            v-else-if="filteredPOs.length === 0"
-            class="bg-white dark:bg-ink-800 rounded-2xl p-12 text-center border border-ink-200 dark:border-ink-600 shadow-sm"
-          >
-            <p class="tag border-2 text-ink-400 inline-flex mb-3">KOSONG</p>
-            <p class="text-ink-600 dark:text-ink-300 font-semibold">
-              Tidak ada PO yang ditemukan
-            </p>
-            <p class="text-xs text-ink-400 mt-1">
-              Coba sesuaikan kata kunci pencarian atau filter Buyer Anda.
-            </p>
-          </div>
-
-          <!-- GRID DATA ASLI -->
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <po-card
-              v-for="po in filteredPOs"
-              :key="po.id"
-              :po="po"
-              @open-placement="openPlacementModal"
-            ></po-card>
-          </div>
-        </div>
-
-        <!-- TAB 2: ADMIN RECORD DASHBOARD -->
-        <div v-if="activeTab === 'admin'" class="space-y-6">
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Form Input Admin (Disembunyikan saat Print) -->
-            <div class="admin-form-wrap no-print">
+        <div class="workspace">
+          <aside class="rail">
+            <div class="no-print">
+              <critical-panel
+                :critical-pos="criticalPOs"
+                :filter-urgent-only="filterUrgentOnly"
+                @toggle-urgent="filterUrgentOnly = !filterUrgentOnly"
+                @open-inspection="openInspectionModalForPO"
+              ></critical-panel>
+            </div>
+            <div v-if="activeTab === 'admin'" class="admin-form-wrap no-print">
               <input
                 type="checkbox"
                 id="admin-form-toggle"
@@ -225,18 +167,79 @@
                 ></admin-form>
               </div>
             </div>
+          </aside>
+          <section class="main-col space-y-6">
+            <div class="no-print">
+              <filter-toolbar
+                :search="searchQuery"
+                :buyer="selectedBuyerFilter"
+                :status="selectedStatusFilter"
+                :buyers="buyers"
+                :show-reset="hasActiveFilters"
+                @update:search="searchQuery = $event"
+                @update:buyer="selectedBuyerFilter = $event"
+                @update:status="selectedStatusFilter = $event"
+                @reset="resetFilters"
+              ></filter-toolbar>
+            </div>
 
-            <!-- Tabel Master PO (INI YANG AKAN TAMPIL BERSIH SAAT DICETAK) -->
-            <po-table
-              :pos="filteredPOs"
-              @edit="openEditModal"
-              @delete="deletePO"
-              @status-change="handleStatusChange"
-              @open-inspection="openInspectionModalForPO"
-              @export-excel="exportToExcel"
-              @print-pdf="printReport"
-            ></po-table>
-          </div>
+            <!-- TAB 1: HELPER BOY DASHBOARD -->
+            <div v-if="activeTab === 'helper'" class="space-y-4 no-print">
+              <div class="flex justify-between items-center">
+                <h2
+                  class="font-display text-lg font-bold text-ink-900 dark:text-white"
+                >
+                  Penempatan Rak &amp; Fisik Karton Gudang
+                </h2>
+                <span class="text-xs font-data text-ink-400 font-medium"
+                  >Menampilkan {{ filteredPOs.length }} PO</span
+                >
+              </div>
+
+              <!-- SKELETON LOADER KETIKA MEMUAT DATA -->
+              <skeleton-loader v-if="isLoading"></skeleton-loader>
+
+              <!-- KONDISI KETIKA DATA KOSONG -->
+              <div
+                v-else-if="filteredPOs.length === 0"
+                class="bg-white dark:bg-ink-800 rounded-2xl p-12 text-center border border-ink-200 dark:border-ink-600 shadow-sm"
+              >
+                <p class="tag border-2 text-ink-400 inline-flex mb-3">KOSONG</p>
+                <p class="text-ink-600 dark:text-ink-300 font-semibold">
+                  Tidak ada PO yang ditemukan
+                </p>
+                <p class="text-xs text-ink-400 mt-1">
+                  Coba sesuaikan kata kunci pencarian atau filter Buyer Anda.
+                </p>
+              </div>
+
+              <!-- GRID DATA ASLI -->
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <po-card
+                  v-for="po in filteredPOs"
+                  :key="po.id"
+                  :po="po"
+                  @open-placement="openPlacementModal"
+                ></po-card>
+              </div>
+            </div>
+
+            <!-- TAB 2: ADMIN RECORD DASHBOARD -->
+            <div v-if="activeTab === 'admin'" class="space-y-6">
+              <div>
+                <!-- Tabel Master PO (INI YANG AKAN TAMPIL BERSIH SAAT DICETAK) -->
+                <po-table
+                  :pos="filteredPOs"
+                  @edit="openEditModal"
+                  @delete="deletePO"
+                  @status-change="handleStatusChange"
+                  @open-inspection="openInspectionModalForPO"
+                  @export-excel="exportToExcel"
+                  @print-pdf="printReport"
+                ></po-table>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
 
@@ -290,5 +293,28 @@
     </div>
 
     <script type="module" src="/js/app.js"></script>
+    <script>
+      (function () {
+        var raf = 0;
+        function set() {
+          raf = 0;
+          var hd = document.querySelector("header");
+          if (hd)
+            document.documentElement.style.setProperty(
+              "--hdr-h",
+              hd.offsetHeight + "px",
+            );
+        }
+        function q() {
+          if (!raf) raf = requestAnimationFrame(set);
+        }
+        new MutationObserver(q).observe(document.body, {
+          childList: true,
+          subtree: true,
+        });
+        addEventListener("resize", q);
+        q();
+      })();
+    </script>
   </body>
 </html>

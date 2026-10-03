@@ -710,3 +710,109 @@ html:not(.dark) body stats-cards > div > * {
     scroll-behavior: smooth;
   }
 }
+
+/* ==========================================================
+   v5 — LAYOUT 2 KOLOM DESKTOP (rail tetap) + PAGINATION
+   ========================================================== */
+html body tr.page-hidden {
+  display: none !important;
+}
+
+.pager-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 0.5rem;
+  font-weight: 700;
+  border: 1.5px solid var(--ink);
+  background: #fffdf8;
+  color: var(--ink);
+}
+.pager-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.pager-btn.pager-active {
+  background: var(--hazard);
+}
+html.dark .pager-btn {
+  background: #20242b;
+  color: #f4f3ef;
+  border-color: #454b57;
+}
+html.dark .pager-btn.pager-active {
+  background: var(--hazard);
+  color: #0b0d11;
+}
+
+/* < 1024px: tumpuk seperti biasa */
+@media (max-width: 1023px) {
+  html body .workspace,
+  html body .rail {
+    display: block;
+  }
+  html body .rail > .no-print:has(.critical-panel) {
+    margin-bottom: 1.5rem;
+  }
+  html body .rail > .no-print:not(:has(.critical-panel)):not(.admin-form-wrap) {
+    display: none;
+  }
+  html body .main-col > * + * {
+    margin-top: 1.5rem;
+  }
+}
+@media (max-width: 767px) {
+  html body .pager {
+    gap: 0.6rem;
+  }
+  html body .pager-btn {
+    min-width: 44px;
+    height: 44px;
+  }
+}
+
+/* >= 1024px: kolom kiri TETAP (Critical + Tambah PO), kolom kanan scroll */
+@media (min-width: 1024px) {
+  html body .workspace {
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  html body .workspace:not(:has(.critical-panel)):not(:has(.admin-form-wrap)) {
+    display: block;
+  }
+  html body .rail {
+    position: sticky;
+    top: calc(var(--hdr-h, 110px) + 16px);
+    max-height: calc(100dvh - var(--hdr-h, 110px) - 32px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0 6px 6px 0;
+  }
+  html body .rail > .no-print:not(:has(.critical-panel)):not(.admin-form-wrap) {
+    display: none;
+  }
+  /* Daftar critical di rail: satu kolom, scroll sendiri */
+  html body .rail .crit-grid {
+    grid-template-columns: 1fr;
+    max-height: min(46dvh, 440px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+}
+
+@media print {
+  html body tr.page-hidden {
+    display: table-row !important;
+  }
+  html body .workspace {
+    display: block;
+  }
+  html body .rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}

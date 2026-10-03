@@ -18,12 +18,86 @@ export default {
     "export-excel",
     "print-pdf",
   ],
-  setup() {
+  setup(props) {
+    const { ref, computed, watch } = Vue;
+
+    // ── Pagination (client-side). pageSize 0 = tampilkan semua ──
+    const PAGE_KEY = "gh_admin_page_size";
+    let saved = 10;
+    try {
+      const v = localStorage.getItem(PAGE_KEY);
+      if (v === "all") saved = 0;
+      else if ([5, 10, 25, 50].includes(Number(v))) saved = Number(v);
+    } catch (e) {}
+    const pageSize = ref(saved);
+    const page = ref(1);
+
+    const sizeValue = computed(() =>
+      pageSize.value ? String(pageSize.value) : "all",
+    );
+    const totalPages = computed(() =>
+      pageSize.value
+        ? Math.max(1, Math.ceil(props.pos.length / pageSize.value))
+        : 1,
+    );
+    const rangeStart = computed(() =>
+      props.pos.length === 0
+        ? 0
+        : pageSize.value
+          ? (page.value - 1) * pageSize.value + 1
+          : 1,
+    );
+    const rangeEnd = computed(() =>
+      pageSize.value
+        ? Math.min(page.value * pageSize.value, props.pos.length)
+        : props.pos.length,
+    );
+    const pageNumbers = computed(() => {
+      const t = totalPages.value;
+      let e = Math.min(t, Math.max(1, page.value - 2) + 4);
+      const s = Math.max(1, e - 4);
+      const arr = [];
+      for (let i = s; i <= e; i++) arr.push(i);
+      return arr;
+    });
+    // Semua baris tetap dirender; yang di luar halaman disembunyikan CSS,
+    // sehingga Cetak/PDF tetap memuat seluruh data.
+    const inPage = (i) =>
+      !pageSize.value ||
+      (i >= (page.value - 1) * pageSize.value &&
+        i < page.value * pageSize.value);
+    const setPage = (n) => {
+      page.value = Math.min(Math.max(1, n), totalPages.value);
+    };
+    const onSizeChange = (e) => {
+      const v = e.target.value;
+      pageSize.value = v === "all" ? 0 : Number(v);
+      page.value = 1;
+      try {
+        localStorage.setItem(PAGE_KEY, v);
+      } catch (err) {}
+    };
+    watch(
+      () => props.pos.length,
+      () => {
+        if (page.value > totalPages.value) page.value = totalPages.value;
+      },
+    );
+
     return {
       formatDateTime,
       getBuyerBadgeClass,
       getStatusBadge,
       STATUS_OPTIONS,
+      sizeValue,
+      totalPages,
+      rangeStart,
+      rangeEnd,
+      pageNumbers,
+      page,
+      inPage,
+      setPage,
+      onSizeChange,
     };
   },
   template: `
@@ -94,7 +168,7 @@ export default {
               <tr v-if="pos.length === 0">
                 <td colspan="4" class="p-6 text-center text-ink-400 font-mono">Tidak ada data PO yang sesuai.</td>
               </tr>
-              <tr v-for="po in pos" :key="po.id" class="po-row hover:bg-paper-50/80 dark:hover:bg-ink-700/20 transition align-top">
+              <tr v-for="(po, idx) in pos" :key="po.id" :class="{ 'page-hidden': !inPage(idx) }" class="po-row hover:bg-paper-50/80 dark:hover:bg-ink-700/20 transition align-top">
                 <td class="p-2.5 space-y-0.5">
                   <div class="flex items-center gap-1.5">
                     <img v-if="po.buyer_logo" :src="po.buyer_logo" class="w-4 h-4 object-contain no-print" @error="$event.target.style.display='none'" />
@@ -171,6 +245,27 @@ export default {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pengaturan halaman (disembunyikan saat Print) -->
+        <div class="pager no-print flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs font-mono">
+          <label class="flex items-center gap-2 font-semibold text-ink-500 dark:text-ink-300">
+            Tampilkan
+            <select :value="sizeValue" @change="onSizeChange" class="px-2 py-1.5 border border-ink-200 dark:border-ink-600 rounded-xl bg-paper-50 dark:bg-ink-700 dark:text-white font-bold">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="all">Semua</option>
+            </select>
+            PO / halaman
+          </label>
+          <span class="text-ink-400 font-semibold">{{ rangeStart }}&ndash;{{ rangeEnd }} dari {{ pos.length }} PO</span>
+          <div v-if="totalPages > 1" class="flex items-center gap-1">
+            <button type="button" :disabled="page === 1" @click="setPage(page - 1)" class="pager-btn" aria-label="Halaman sebelumnya">&lsaquo;</button>
+            <button v-for="n in pageNumbers" :key="n" type="button" @click="setPage(n)" :class="n === page ? 'pager-btn pager-active' : 'pager-btn'" :aria-current="n === page ? 'page' : null">{{ n }}</button>
+            <button type="button" :disabled="page === totalPages" @click="setPage(page + 1)" class="pager-btn" aria-label="Halaman berikutnya">&rsaquo;</button>
+          </div>
         </div>
       </div>
     </div>
