@@ -1,4 +1,8 @@
-import { formatDateTime, getStatusBadge, getUrgencyBadgeText } from "../utils.js";
+import {
+  formatDateTime,
+  getStatusBadge,
+  getUrgencyBadgeText,
+} from "../utils.js";
 
 export default {
   name: "CriticalPanel",
@@ -13,16 +17,16 @@ export default {
   template: `
     <div
       v-if="criticalPos.length > 0"
-      class="bg-gradient-to-r from-alarm-500/10 via-hazard-500/5 to-transparent border-l-4 border-alarm-500 rounded-2xl p-5 bg-white dark:bg-ink-800 shadow-sm border border-ink-200 dark:border-ink-600 space-y-3"
+      class="critical-panel bg-gradient-to-r from-alarm-500/10 via-hazard-500/5 to-transparent border-l-4 border-alarm-500 rounded-2xl p-5 bg-white dark:bg-ink-800 shadow-sm border border-ink-200 dark:border-ink-600 space-y-3"
     >
-      <div class="flex justify-between items-center">
+      <div class="crit-head flex justify-between items-center">
         <div class="flex items-center gap-2">
           <span class="stamp text-alarm-600 dark:text-alarm-300">!!</span>
           <div>
             <h3 class="font-display text-sm font-bold text-alarm-700 dark:text-alarm-300">
               Panel Atensi PO Kritikal &amp; Urgent ({{ criticalPos.length }} PO)
             </h3>
-            <p class="text-xs text-ink-400">
+            <p class="crit-desc text-xs text-ink-400">
               PO berstatus Inspeksi Aktif atau Tanggal Shipment berjarak &le; 2 hari (H-2 s/d Hari H).
             </p>
           </div>
@@ -31,18 +35,18 @@ export default {
         <button
           type="button"
           @click="$emit('toggle-urgent')"
-          class="text-xs font-data font-bold px-3 py-1.5 rounded-xl border transition"
+          class="crit-btn text-xs font-data font-bold px-3 py-1.5 rounded-xl border transition"
           :class="filterUrgentOnly ? 'bg-alarm-600 text-white border-alarm-600' : 'bg-alarm-50 dark:bg-alarm-700/20 text-alarm-700 dark:text-alarm-300 border-alarm-300 dark:border-alarm-700 hover:bg-alarm-100'"
         >
           {{ filterUrgentOnly ? 'Tampilkan Semua PO' : 'Filter Urgent' }}
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+      <div class="crit-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
         <div
           v-for="cpo in criticalPos"
           :key="'crit-' + cpo.id"
-          class="bg-white dark:bg-ink-700/60 p-3.5 rounded-xl border border-alarm-200 dark:border-alarm-700/60 shadow-xs flex flex-col justify-between gap-2"
+          class="crit-card bg-white dark:bg-ink-700/60 p-3.5 rounded-xl border border-alarm-200 dark:border-alarm-700/60 shadow-xs flex flex-col justify-between gap-2"
         >
           <div class="flex justify-between items-start">
             <div class="flex items-center gap-2">

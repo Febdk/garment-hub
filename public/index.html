@@ -203,12 +203,27 @@
         <div v-if="activeTab === 'admin'" class="space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Form Input Admin (Disembunyikan saat Print) -->
-            <div class="no-print">
-              <admin-form
-                :buyers="buyers"
-                :form="form"
-                @submit="submitPO"
-              ></admin-form>
+            <div class="admin-form-wrap no-print">
+              <input
+                type="checkbox"
+                id="admin-form-toggle"
+                class="admin-toggle"
+                aria-label="Buka form tambah PO"
+              />
+              <label for="admin-form-toggle" class="admin-fab"
+                >+ Tambah PO</label
+              >
+              <label for="admin-form-toggle" class="admin-scrim"></label>
+              <div class="admin-form-body">
+                <label for="admin-form-toggle" class="admin-close"
+                  ><span>Form PO Baru</span><span>Tutup &#10005;</span></label
+                >
+                <admin-form
+                  :buyers="buyers"
+                  :form="form"
+                  @submit="submitPO"
+                ></admin-form>
+              </div>
             </div>
 
             <!-- Tabel Master PO (INI YANG AKAN TAMPIL BERSIH SAAT DICETAK) -->

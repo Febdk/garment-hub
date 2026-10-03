@@ -568,3 +568,145 @@ html:not(.dark) body stats-cards > div > * {
     display: table-header-group;
   }
 }
+
+/* ==========================================================
+   v4 — FORM ADMIN (bottom sheet) + PANEL CRITICAL (geser samping)
+   ========================================================== */
+.admin-toggle {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.admin-fab,
+.admin-scrim,
+.admin-close {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  html body .admin-form-wrap {
+    display: contents;
+  }
+  html body .admin-form-body {
+    display: none;
+  }
+
+  html body .admin-fab {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    right: 1rem;
+    z-index: 35;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    min-height: 52px;
+    padding: 0 1.1rem;
+    background: var(--hazard);
+    color: #0b0d11;
+    border: 2px solid #0b0d11;
+    box-shadow: 3px 3px 0 #0b0d11;
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+  }
+  html body .admin-fab:active {
+    transform: translate(1px, 1px);
+  }
+  html body .admin-toggle:focus-visible ~ .admin-fab {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  html body .admin-toggle:checked ~ .admin-fab {
+    display: none;
+  }
+  html body .admin-toggle:checked ~ .admin-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    background: rgba(11, 13, 17, 0.6);
+  }
+  html body .admin-toggle:checked ~ .admin-form-body {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    max-height: 92dvh;
+    overflow-y: auto;
+    border-top: 3px solid var(--hazard);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: #fffdf8;
+  }
+  html.dark body .admin-toggle:checked ~ .admin-form-body {
+    background: #151920;
+  }
+  html body .admin-close {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    min-height: 48px;
+    padding: 0 1rem;
+    background: #0b0d11;
+    color: #f4f3ef;
+    cursor: pointer;
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.03em;
+  }
+  html body .admin-form-body > div:not(.admin-close) {
+    border-radius: 0;
+    box-shadow: none;
+    border-width: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Panel Critical ringkas: kartu digeser ke samping */
+  html body .critical-panel {
+    padding: 0.75rem;
+  }
+  html body .crit-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+  html body .crit-desc {
+    display: none;
+  }
+  html body .crit-btn {
+    width: 100%;
+    min-height: 44px;
+    font-size: 0.8rem;
+  }
+  html body .crit-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 0.6rem;
+    margin: 0 -0.75rem;
+    padding: 0.25rem 0.75rem 0.6rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  html body .crit-card {
+    flex: 0 0 86%;
+    scroll-snap-align: center;
+  }
+  html body .crit-card button {
+    min-height: 36px;
+    padding: 0 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html body .crit-grid {
+    scroll-behavior: smooth;
+  }
+}
