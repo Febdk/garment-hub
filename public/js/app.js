@@ -21,6 +21,11 @@ import UserManagementModal from "./components/modals/UserManagementModal.js";
 import AuditTrailModal from "./components/modals/AuditTrailModal.js";
 import SkeletonLoader from "./components/SkeletonLoader.js";
 
+// --- KOMPONEN BARU V6 ---
+import PoDetailDrawer from "./components/modals/PoDetailDrawer.js";
+import CartonInModal from "./components/modals/CartonInModal.js";
+import CartonOutModal from "./components/modals/CartonOutModal.js";
+
 const app = createApp({
   components: {
     HeaderBar,
@@ -38,6 +43,10 @@ const app = createApp({
     UserManagementModal,
     AuditTrailModal,
     SkeletonLoader,
+    // --- REGISTER KOMPONEN V6 ---
+    PoDetailDrawer,
+    CartonInModal,
+    CartonOutModal,
   },
   setup() {
     // State Sesi & Autentikasi
@@ -46,7 +55,7 @@ const app = createApp({
     );
     const showLoginModal = ref(!currentUser.value);
     const showUserModal = ref(false);
-    const showAuditTrailModal = ref(false); // State untuk Modal Audit Trail
+    const showAuditTrailModal = ref(false);
 
     const logout = () => {
       localStorage.removeItem("gcwh_token");
@@ -80,13 +89,36 @@ const app = createApp({
     const filterUrgentOnly = ref(false);
     const message = ref("");
 
+    // State Modals Lama
     const showPlacementModal = ref(false);
     const showEditModal = ref(false);
     const showInspectionModal = ref(false);
     const showLogoModal = ref(false);
 
+    // --- STATE MODALS V6 (TRACKING KARTON) ---
+    const showPoDrawer = ref(false);
+    const showCartonInModal = ref(false);
+    const showCartonOutModal = ref(false);
+    const selectedPO = ref(null); // Menyimpan data PO yang sedang diklik untuk Drawer
+
     const activePO = ref({});
     const activeColor = ref({});
+
+    // --- FUNGSI TRIGGER DRAWER V6 ---
+    const openPoDrawer = (po) => {
+      selectedPO.value = po;
+      showPoDrawer.value = true;
+    };
+
+    const openCartonInModal = (po) => {
+      selectedPO.value = po;
+      showCartonInModal.value = true;
+    };
+
+    const openCartonOutModal = (po) => {
+      selectedPO.value = po;
+      showCartonOutModal.value = true;
+    };
 
     const form = ref({
       buyer: "",
@@ -151,7 +183,16 @@ const app = createApp({
 
       try {
         const resData = await api.getPOs();
-        if (resData.ok) items.value = await resData.json();
+        if (resData.ok) {
+          items.value = await resData.json();
+          // Jika Drawer sedang terbuka, perbarui data selectedPO secara reaktif
+          if (showPoDrawer.value && selectedPO.value) {
+            const updatedPO = items.value.find(
+              (p) => p.id === selectedPO.value.id,
+            );
+            if (updatedPO) selectedPO.value = updatedPO;
+          }
+        }
       } catch (e) {}
 
       try {
@@ -167,26 +208,22 @@ const app = createApp({
         document.documentElement.classList.add("dark");
       }
 
-      // Listen for session-expired events from api.js
       window.addEventListener("gcwh-session-expired", () => {
         logout();
       });
 
-      // Verify JWT token on page load
       if (currentUser.value && localStorage.getItem("gcwh_token")) {
         try {
           const res = await verifyToken();
           if (res.ok) {
             fetchData();
           } else {
-            // Token invalid/expired → force re-login
             logout();
           }
         } catch (e) {
           logout();
         }
       } else if (currentUser.value) {
-        // User data exists but no token → force re-login
         logout();
       }
     });
@@ -198,7 +235,6 @@ const app = createApp({
       filterUrgentOnly.value = false;
     };
 
-    // Submit New PO
     const submitPO = async () => {
       const finalBuyer =
         form.value.buyer === "CUSTOM"
@@ -231,7 +267,6 @@ const app = createApp({
       }
     };
 
-    // Open Edit PO Modal
     const openEditModal = (po) => {
       const isStandardBuyer = buyers.value.some((b) => b.name === po.buyer);
       const dateStr = po.ex_fty_date ? po.ex_fty_date.split("T")[0] : "";
@@ -269,7 +304,6 @@ const app = createApp({
       showEditModal.value = true;
     };
 
-    // Save Edit PO
     const saveEditPO = async () => {
       try {
         const finalBuyer =
@@ -325,7 +359,6 @@ const app = createApp({
       }
     };
 
-    // Open Inspection Modal Directly for a PO
     const openInspectionModalForPO = (po, targetStatus) => {
       const nowISO = new Date().toISOString().slice(0, 16);
       const defaultInspector =
@@ -350,7 +383,6 @@ const app = createApp({
       showInspectionModal.value = true;
     };
 
-    // Handle Status Change Dropdown
     const handleStatusChange = (po, newStatus) => {
       if (
         newStatus === "Inspection Internal" ||
@@ -362,7 +394,6 @@ const app = createApp({
       }
     };
 
-    // Submit Inspection Details
     const submitInspection = async () => {
       const res = await api.updatePOStatus(inspectionForm.value.po_id, {
         status: inspectionForm.value.targetStatus,
@@ -377,7 +408,6 @@ const app = createApp({
       }
     };
 
-    // Simple Update Status
     const updateStatus = async (id, status) => {
       const res = await api.updatePOStatus(id, { status });
       if (res.ok) {
@@ -387,7 +417,6 @@ const app = createApp({
       }
     };
 
-    // Prompt Update Logo
     const openUpdateLogoPrompt = async (buyer) => {
       const newUrl = prompt(
         `Masukkan URL Logo Baru untuk ${buyer.name}:`,
@@ -405,7 +434,6 @@ const app = createApp({
       }
     };
 
-    // Delete PO
     const deletePO = async (id, poNumber) => {
       if (confirm(`Yakin mau menghapus PO ${poNumber}?`)) {
         const res = await api.removePO(id);
@@ -417,7 +445,6 @@ const app = createApp({
       }
     };
 
-    // Open Helper Placement Modal
     const openPlacementModal = (po, color) => {
       activePO.value = po;
       activeColor.value = color;
@@ -430,7 +457,6 @@ const app = createApp({
       showPlacementModal.value = true;
     };
 
-    // Save Placement
     const savePlacement = async () => {
       const res = await api.updateColorPlacement(placementForm.value);
       if (res.ok) {
@@ -441,7 +467,6 @@ const app = createApp({
       }
     };
 
-    // --- FUNGSI EXPORT KE EXCEL (CSV) ---
     const exportToExcel = () => {
       if (!items.value || items.value.length === 0) {
         alert("Tidak ada data PO untuk diexport!");
@@ -505,17 +530,14 @@ const app = createApp({
       document.body.removeChild(link);
     };
 
-    // --- FUNGSI CETAK / PDF ---
     const printReport = () => {
       window.print();
     };
 
-    // Computed Critical / Urgent POs
     const criticalPOs = computed(() =>
       items.value.filter((po) => isUrgentPO(po)),
     );
 
-    // Computed Filtered POs
     const filteredPOs = computed(() => {
       return items.value.filter((po) => {
         if (filterUrgentOnly.value) {
@@ -570,7 +592,18 @@ const app = createApp({
       currentUser,
       showLoginModal,
       showUserModal,
-      showAuditTrailModal, // <-- Daftarkan di sini agar modal bisa dikontrol
+      showAuditTrailModal,
+
+      // -- RETURN STATE & FUNGSI V6 --
+      showPoDrawer,
+      showCartonInModal,
+      showCartonOutModal,
+      selectedPO,
+      openPoDrawer,
+      openCartonInModal,
+      openCartonOutModal,
+      fetchData, // Diekspos agar bisa di-call dari modal sukses
+
       logout,
       onLoginSuccess,
       isDarkMode,

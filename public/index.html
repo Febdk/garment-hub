@@ -280,6 +280,30 @@
         @close="showAuditTrailModal = false"
       ></audit-trail-modal>
 
+      <!-- ================= MODALS V6 ================= -->
+      <po-detail-drawer
+        :po="selectedPO"
+        :is-open="showPoDrawer"
+        @close="showPoDrawer = false"
+        @open-carton-in="openCartonInModal"
+        @open-carton-out="openCartonOutModal"
+      ></po-detail-drawer>
+
+      <carton-in-modal
+        :po="selectedPO"
+        :is-open="showCartonInModal"
+        @close="showCartonInModal = false"
+        @success="fetchData"
+      ></carton-in-modal>
+
+      <carton-out-modal
+        :po="selectedPO"
+        :is-open="showCartonOutModal"
+        @close="showCartonOutModal = false"
+        @success="fetchData"
+      ></carton-out-modal>
+      <!-- =========================================== -->
+
       <!-- MODAL LOGIN & USER MANAGEMENT -->
       <login-modal
         :show="showLoginModal"

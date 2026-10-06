@@ -113,3 +113,26 @@ export const verifyToken = () =>
 
 export const getLogs = () =>
   authFetch("/api/audit-logs", { headers: getAuthHeaders() });
+
+// =========================================================================
+// API TRACKING KARTON (GARMENT HUB V6)
+// =========================================================================
+
+export const recordCartonIn = (payload) =>
+  authFetch("/api/cartons/in", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const recordCartonOut = (payload) =>
+  authFetch("/api/cartons/out", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const getPoMovements = (id) =>
+  authFetch(`/api/po/${id}/movements`, {
+    headers: getAuthHeaders(),
+  });
