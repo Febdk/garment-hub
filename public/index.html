@@ -143,6 +143,7 @@
                 :filter-urgent-only="filterUrgentOnly"
                 @toggle-urgent="filterUrgentOnly = !filterUrgentOnly"
                 @open-inspection="openInspectionModalForPO"
+                @open-drawer="openPoDrawer"
               ></critical-panel>
             </div>
             <div v-if="activeTab === 'admin'" class="admin-form-wrap no-print">
@@ -220,6 +221,7 @@
                   :key="po.id"
                   :po="po"
                   @open-placement="openPlacementModal"
+                  @open-drawer="openPoDrawer"
                 ></po-card>
               </div>
             </div>
@@ -236,6 +238,7 @@
                   @open-inspection="openInspectionModalForPO"
                   @export-excel="exportToExcel"
                   @print-pdf="printReport"
+                  @open-drawer="openPoDrawer"
                 ></po-table>
               </div>
             </div>
