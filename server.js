@@ -725,6 +725,102 @@ app.get("/api/verify-token", authenticateToken, (req, res) => {
   res.json({ valid: true, user: req.user });
 });
 
+// =========================================================================
+// API TRACKING KARTON (GARMENT HUB V6)
+// =========================================================================
+
+// 1. Catat Karton Masuk
+app.post("/api/cartons/in", authenticateToken, async (req, res) => {
+  const { po_id, quantity, notes } = req.body;
+  const recorded_by = req.user.id;
+
+  if (!po_id || !quantity) {
+    return res.status(400).json({ error: "po_id dan quantity wajib diisi" });
+  }
+
+  try {
+    await db.query(
+      "UPDATE purchase_orders SET qty_in = qty_in + ? WHERE id = ?",
+      [quantity, po_id],
+    );
+
+    await db.query(
+      "INSERT INTO carton_movements (po_id, type, quantity, reason, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?)",
+      [po_id, "IN", quantity, "Karton Masuk", notes || "", recorded_by || null],
+    );
+
+    await recordLog(
+      req.user.username,
+      "CARTON_IN",
+      `Mencatat ${quantity} karton masuk untuk PO ID #${po_id}`,
+    );
+
+    res.json({ success: true, message: "Karton masuk berhasil dicatat" });
+  } catch (err) {
+    console.error("Error carton in:", err);
+    res.status(500).json({ error: "Gagal mencatat karton masuk" });
+  }
+});
+
+// 2. Catat Karton Keluar
+app.post("/api/cartons/out", authenticateToken, async (req, res) => {
+  const { po_id, quantity, reason, notes } = req.body;
+  const recorded_by = req.user.id;
+
+  if (!po_id || !quantity) {
+    return res.status(400).json({ error: "po_id dan quantity wajib diisi" });
+  }
+
+  try {
+    await db.query(
+      "UPDATE purchase_orders SET qty_out = qty_out + ? WHERE id = ?",
+      [quantity, po_id],
+    );
+
+    await db.query(
+      "INSERT INTO carton_movements (po_id, type, quantity, reason, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?)",
+      [
+        po_id,
+        "OUT",
+        quantity,
+        reason || "Karton Keluar",
+        notes || "",
+        recorded_by || null,
+      ],
+    );
+
+    await recordLog(
+      req.user.username,
+      "CARTON_OUT",
+      `Mencatat ${quantity} karton keluar untuk PO ID #${po_id}`,
+    );
+
+    res.json({ success: true, message: "Karton keluar berhasil dicatat" });
+  } catch (err) {
+    console.error("Error carton out:", err);
+    res.status(500).json({ error: "Gagal mencatat karton keluar" });
+  }
+});
+
+// 3. Ambil Riwayat Pergerakan Karton (Timeline)
+app.get("/api/po/:id/movements", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query(
+      `SELECT c.*, u.username as recorded_by_name 
+             FROM carton_movements c 
+             LEFT JOIN users u ON c.recorded_by = u.id 
+             WHERE c.po_id = ? 
+             ORDER BY c.recorded_at DESC`,
+      [id],
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching movements:", err);
+    res.status(500).json({ error: "Gagal mengambil riwayat karton" });
+  }
+});
+
 // ── SPA Fallback ────────────────────────────────────────────────────
 app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
