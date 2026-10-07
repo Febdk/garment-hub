@@ -10,15 +10,17 @@ export default {
   },
   emits: ["close", "success"],
   setup(props, { emit }) {
+    const selectedColorId = ref("");
     const quantity = ref("");
     const reason = ref("Inspeksi");
     const notes = ref("");
     const isSubmitting = ref(false);
 
-    // Hitung sisa stok di rak secara reaktif
-    const sisaDiRak = computed(() => {
-      if (!props.po) return 0;
-      return (props.po.qty_in || 0) - (props.po.qty_out || 0);
+    // Hitung sisa stok HANYA UNTUK WARNA YANG DIPILIH
+    const sisaDiRakWarna = computed(() => {
+      if (!props.po || !selectedColorId.value) return 0;
+      const warna = props.po.colors.find((c) => c.id === selectedColorId.value);
+      return warna ? warna.carton_qty || 0 : 0;
     });
 
     watch(
@@ -28,21 +30,30 @@ export default {
           quantity.value = "";
           reason.value = "Inspeksi";
           notes.value = "";
+          if (props.po && props.po.colors && props.po.colors.length === 1) {
+            selectedColorId.value = props.po.colors[0].id;
+          } else {
+            selectedColorId.value = "";
+          }
         }
       },
     );
 
     const handleSubmit = async () => {
-      const inputQty = parseInt(quantity.value);
+      if (!selectedColorId.value) {
+        alert("Pilih warna (Color) terlebih dahulu!");
+        return;
+      }
 
+      const inputQty = parseInt(quantity.value);
       if (!inputQty || inputQty <= 0) {
         alert("Jumlah karton harus diisi dan lebih dari 0!");
         return;
       }
 
-      if (inputQty > sisaDiRak.value) {
+      if (inputQty > sisaDiRakWarna.value) {
         alert(
-          `Gagal: Jumlah keluar (${inputQty}) melebihi sisa di rak (${sisaDiRak.value})!`,
+          `Gagal: Jumlah keluar (${inputQty}) melebihi fisik karton warna ini di rak (${sisaDiRakWarna.value})!`,
         );
         return;
       }
@@ -51,6 +62,7 @@ export default {
       try {
         const payload = {
           po_id: props.po.id,
+          color_id: selectedColorId.value, // Ngirim ID warna ke backend
           quantity: inputQty,
           reason: reason.value,
           notes: notes.value,
@@ -72,7 +84,15 @@ export default {
       }
     };
 
-    return { quantity, reason, notes, isSubmitting, sisaDiRak, handleSubmit };
+    return {
+      selectedColorId,
+      quantity,
+      reason,
+      notes,
+      isSubmitting,
+      sisaDiRakWarna,
+      handleSubmit,
+    };
   },
   template: `
     <div v-if="isOpen && po" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -96,25 +116,40 @@ export default {
         <!-- Body -->
         <div class="p-5 space-y-4">
           
+          <!-- Dropdown Pilih Warna -->
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Pilih Warna (Style) *</label>
+            <select 
+              v-model="selectedColorId" 
+              class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-xl focus:ring-red-500 focus:border-red-500 block p-3 min-h-[48px]"
+            >
+              <option value="" disabled>-- Pilih Warna --</option>
+              <option v-for="c in po.colors" :key="c.id" :value="c.id">
+                COL: {{ c.color_code }} (Fisik: {{ c.carton_qty || 0 }} Ktn)
+              </option>
+            </select>
+          </div>
+
           <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700 flex justify-between items-center">
             <div>
               <p class="text-gray-400 text-xs">PO Number</p>
               <p class="text-white font-bold text-sm">{{ po.po_number }}</p>
             </div>
             <div class="text-right">
-              <p class="text-gray-400 text-xs">Sisa di Rak</p>
-              <p class="text-yellow-400 font-bold text-lg">{{ sisaDiRak }} <span class="text-xs font-normal">CTN</span></p>
+              <p class="text-gray-400 text-xs">Sisa Fisik (Warna Ini)</p>
+              <p class="text-yellow-400 font-bold text-lg">{{ sisaDiRakWarna }} <span class="text-xs font-normal">CTN</span></p>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Qty Keluar (Karton)</label>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Qty Keluar (Karton) *</label>
             <input 
               v-model="quantity" 
               type="number" 
               min="1"
-              :max="sisaDiRak"
-              class="w-full bg-gray-900 border border-gray-600 text-white text-lg rounded-xl focus:ring-red-500 focus:border-red-500 block p-3 min-h-[48px]" 
+              :max="sisaDiRakWarna"
+              :disabled="!selectedColorId || sisaDiRakWarna === 0"
+              class="w-full bg-gray-900 border border-gray-600 text-white text-lg rounded-xl focus:ring-red-500 focus:border-red-500 block p-3 min-h-[48px] disabled:opacity-50" 
               placeholder="Contoh: 2"
             >
           </div>
@@ -139,7 +174,6 @@ export default {
               v-model="notes" 
               rows="2"
               class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-xl focus:ring-red-500 focus:border-red-500 block p-3" 
-              placeholder="Catatan tambahan..."
             ></textarea>
           </div>
         </div>
@@ -149,8 +183,7 @@ export default {
           <button @click="$emit('close')" class="min-h-[48px] px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors">
             Batal
           </button>
-          <button @click="handleSubmit" :disabled="isSubmitting || sisaDiRak === 0" class="min-h-[48px] px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50">
-            <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          <button @click="handleSubmit" :disabled="isSubmitting || !selectedColorId || sisaDiRakWarna === 0" class="min-h-[48px] px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50">
             Simpan
           </button>
         </div>

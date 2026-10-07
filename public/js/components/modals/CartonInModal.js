@@ -10,6 +10,7 @@ export default {
   },
   emits: ["close", "success"],
   setup(props, { emit }) {
+    const selectedColorId = ref("");
     const quantity = ref("");
     const notes = ref("");
     const isSubmitting = ref(false);
@@ -21,11 +22,21 @@ export default {
         if (newVal) {
           quantity.value = "";
           notes.value = "";
+          // Auto-select jika warnanya cuma 1
+          if (props.po && props.po.colors && props.po.colors.length === 1) {
+            selectedColorId.value = props.po.colors[0].id;
+          } else {
+            selectedColorId.value = "";
+          }
         }
       },
     );
 
     const handleSubmit = async () => {
+      if (!selectedColorId.value) {
+        alert("Pilih warna (Color) terlebih dahulu!");
+        return;
+      }
       if (!quantity.value || quantity.value <= 0) {
         alert("Jumlah karton harus diisi dan lebih dari 0!");
         return;
@@ -35,13 +46,14 @@ export default {
       try {
         const payload = {
           po_id: props.po.id,
+          color_id: selectedColorId.value, // Ngirim ID warna ke backend
           quantity: parseInt(quantity.value),
           notes: notes.value,
         };
 
         const res = await recordCartonIn(payload);
         if (res.ok) {
-          emit("success"); // Memicu refresh data di komponen induk (app.js)
+          emit("success");
           emit("close");
         } else {
           const err = await res.json();
@@ -55,7 +67,7 @@ export default {
       }
     };
 
-    return { quantity, notes, isSubmitting, handleSubmit };
+    return { selectedColorId, quantity, notes, isSubmitting, handleSubmit };
   },
   template: `
     <div v-if="isOpen && po" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -78,13 +90,33 @@ export default {
 
         <!-- Body -->
         <div class="p-5 space-y-4">
-          <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-sm">
-            <p class="text-gray-400">PO: <span class="text-white font-bold">{{ po.po_number }}</span></p>
-            <p class="text-gray-400">Style: <span class="text-white">{{ po.style_code }}</span></p>
+          <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-sm flex justify-between">
+            <div>
+              <p class="text-gray-400">PO Number</p>
+              <p class="text-white font-bold">{{ po.po_number }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-gray-400">Style</p>
+              <p class="text-white">{{ po.style_code }}</p>
+            </div>
+          </div>
+
+          <!-- Dropdown Pilih Warna -->
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Pilih Warna (Style) *</label>
+            <select 
+              v-model="selectedColorId" 
+              class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block p-3 min-h-[48px]"
+            >
+              <option value="" disabled>-- Pilih Warna --</option>
+              <option v-for="c in po.colors" :key="c.id" :value="c.id">
+                COL: {{ c.color_code }} (Target: {{ c.total_qty }} Ktn)
+              </option>
+            </select>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Qty Masuk (Karton)</label>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Qty Masuk (Karton) *</label>
             <input 
               v-model="quantity" 
               type="number" 
@@ -95,12 +127,12 @@ export default {
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Catatan / Rak (Opsional)</label>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Keterangan / Rak (Opsional)</label>
             <textarea 
               v-model="notes" 
               rows="2"
               class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block p-3" 
-              placeholder="Misal: Rak A-02, kondisi baik..."
+              placeholder="Misal: Ditaruh di Rak F2..."
             ></textarea>
           </div>
         </div>
@@ -110,8 +142,7 @@ export default {
           <button @click="$emit('close')" class="min-h-[48px] px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors">
             Batal
           </button>
-          <button @click="handleSubmit" :disabled="isSubmitting" class="min-h-[48px] px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50">
-            <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          <button @click="handleSubmit" :disabled="isSubmitting || !selectedColorId" class="min-h-[48px] px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50">
             Simpan
           </button>
         </div>

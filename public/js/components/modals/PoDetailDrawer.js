@@ -119,6 +119,10 @@ export default {
                 <p class="text-[10px] text-gray-400 uppercase mb-1">Keluar</p>
                 <p class="text-xl font-bold text-red-400">{{ po.qty_out || 0 }}</p>
               </div>
+              <div class="bg-gray-900 p-2 rounded-lg border border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.1)]">
+                <p class="text-[10px] text-yellow-400 uppercase mb-1">Di Rak</p>
+                <p class="text-xl font-bold text-white">{{ (po.qty_in || 0) - (po.qty_out || 0) }}</p>
+              </div>
             </div>
             
             <!-- Tombol Aksi Cepat Tracking -->
