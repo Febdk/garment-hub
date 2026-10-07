@@ -37,10 +37,10 @@ export default {
           <div>
             <label class="block text-[11px] font-data font-bold text-ink-500 dark:text-ink-300 mb-1 uppercase">Lokasi Rak / Floor (Contoh: F11)</label>
             <input
-              type="text"
               v-model="placementForm.rack_location"
-              required
-              placeholder="Cth: F11, RAK-B2"
+              type="text" 
+              class="..."
+              placeholder="Contoh: Rak A1 atau F1"
               class="w-full px-3 py-2 text-sm bg-white dark:bg-ink-700 border border-ink-200 dark:border-ink-600 rounded-xl focus:ring-2 focus:ring-hazard-500 focus:outline-none uppercase font-data font-semibold dark:text-white"
             />
           </div>
