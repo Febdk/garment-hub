@@ -7,7 +7,27 @@ export default {
   },
   emits: ["open-drawer"],
   setup() {
-    return { getBuyerBadgeClass, getStatusBadge, isUrgentPO };
+    // Fungsi pintar untuk menggabungkan lokasi rak
+    const getGlobalRack = (po) => {
+      if (!po.colors || po.colors.length === 0) return "BELUM SET";
+
+      // 1. Ambil semua nama rak dari setiap warna, abaikan yang kosong atau 'BELUM SET'
+      const racks = po.colors
+        .map((c) => c.rack_location)
+        .filter(
+          (r) => r && r.trim() !== "" && r.trim().toUpperCase() !== "BELUM SET",
+        );
+
+      if (racks.length === 0) return "BELUM SET";
+
+      // 2. Buang duplikat menggunakan Set (kalau semua warna di F1, array jadinya cuma ['F1'])
+      const uniqueRacks = [...new Set(racks)];
+
+      // 3. Gabungkan dengan koma
+      return uniqueRacks.join(", ");
+    };
+
+    return { getBuyerBadgeClass, getStatusBadge, isUrgentPO, getGlobalRack };
   },
   template: `
     <div
@@ -34,20 +54,28 @@ export default {
         </div>
       </div>
 
-      <!-- Ringkasan Global PO (Sangat Simple) -->
-      <div class="p-4 flex-1">
-        <div class="flex justify-between items-center text-sm font-mono mb-2">
+      <!-- Ringkasan Global PO -->
+      <div class="p-4 flex-1 space-y-2">
+        <div class="flex justify-between items-center text-sm font-mono">
            <span class="text-gray-500 dark:text-gray-400">Total Warna:</span>
-           <span class="font-bold text-white">{{ po.colors ? po.colors.length : 0 }} Col</span>
+           <span class="font-bold text-ink-900 dark:text-white">{{ po.colors ? po.colors.length : 0 }} Col</span>
         </div>
         <div class="flex justify-between items-center text-sm font-mono">
            <span class="text-gray-500 dark:text-gray-400">Target Karton:</span>
-           <span class="font-bold text-white">{{ po.colors ? po.colors.reduce((sum, c) => sum + (c.total_qty || 0), 0) : 0 }} Ktn</span>
+           <span class="font-bold text-ink-900 dark:text-white">{{ po.colors ? po.colors.reduce((sum, c) => sum + (c.total_qty || 0), 0) : 0 }} Ktn</span>
+        </div>
+        
+        <!-- Logika Penggabungan Rak Tampil Di Sini -->
+        <div class="flex justify-between items-start text-sm font-mono pt-2 border-t border-ink-100 dark:border-ink-700">
+           <span class="text-gray-500 dark:text-gray-400 mt-0.5">Lokasi Rak:</span>
+           <span class="font-bold text-right text-hazard-600 dark:text-hazard-400 max-w-[60%]">
+             {{ getGlobalRack(po) }}
+           </span>
         </div>
       </div>
 
-      <div class="p-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-700 text-center">
-        <span class="text-xs font-bold text-yellow-500 uppercase tracking-wider">Ketuk untuk Detail &amp; Tracking &rarr;</span>
+      <div class="p-3 bg-gray-50 dark:bg-ink-900/60 border-t border-ink-100 dark:border-ink-700 text-center">
+        <span class="text-[11px] font-bold text-hazard-500 uppercase tracking-wider">Ketuk untuk Detail &amp; Tracking &rarr;</span>
       </div>
     </div>
   `,
