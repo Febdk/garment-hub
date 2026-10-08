@@ -17,10 +17,16 @@ export default {
     "open-inspection",
     "export-excel",
     "print-pdf",
-    "open-drawer", // <-- Event untuk membuka Drawer V6
+    "open-drawer", // Event untuk membuka Drawer V6
   ],
   setup(props) {
     const { ref, computed, watch } = Vue;
+
+    // Helper untuk format tanggal ringkas (YYYY-MM-DD)
+    const formatDateOnly = (val) => {
+      if (!val) return "-";
+      return val.split("T")[0];
+    };
 
     // ── Pagination (client-side) ──
     const PAGE_KEY = "gh_admin_page_size";
@@ -86,6 +92,7 @@ export default {
 
     return {
       formatDateTime,
+      formatDateOnly,
       getBuyerBadgeClass,
       getStatusBadge,
       STATUS_OPTIONS,
@@ -128,6 +135,7 @@ export default {
             <thead>
               <tr class="bg-paper-50 dark:bg-ink-900/60 border-b border-ink-200 dark:border-ink-600 text-[10px] font-mono font-bold text-ink-400 uppercase tracking-wider">
                 <th class="p-2.5">Buyer / PO &amp; Style</th>
+                <th class="p-2.5">Ex-Fty Date / Shipment</th>
                 <th class="p-2.5">Breakdown Warna</th>
                 <th class="p-2.5">Status &amp; Log Inspeksi</th>
                 <th class="p-2.5 text-center no-print">Aksi</th>
@@ -135,7 +143,7 @@ export default {
             </thead>
             <tbody class="divide-y divide-ink-100 dark:divide-ink-700/60 text-xs">
               <tr v-if="pos.length === 0">
-                <td colspan="4" class="p-6 text-center text-ink-400 font-mono">Tidak ada data PO yang sesuai.</td>
+                <td colspan="5" class="p-6 text-center text-ink-400 font-mono">Tidak ada data PO yang sesuai.</td>
               </tr>
               <tr v-for="(po, idx) in pos" :key="po.id" :class="{ 'page-hidden': !inPage(idx) }" class="po-row hover:bg-paper-50/80 dark:hover:bg-ink-700/20 transition align-top">
                 <td class="p-2.5 space-y-0.5">
@@ -147,8 +155,25 @@ export default {
                   <div class="text-[11px] text-ink-500 dark:text-ink-400 font-mono">
                     Style: <b class="text-ink-700 dark:text-ink-200">{{ po.style_code }}</b>
                   </div>
-                  <div class="text-[10px] text-ink-400 font-mono">
-                    Ex-Fty: {{ po.ex_fty_date ? po.ex_fty_date.split('T')[0] : '-' }}
+                </td>
+
+                <!-- TAMPILAN TANGGAL SHIPMENT DADAKAN (REVISI) -->
+                <td data-label="Shipment" class="p-2.5 font-mono">
+                  <div v-if="po.revised_ex_fty_date" class="flex flex-col gap-0.5">
+                    <span class="text-ink-400 line-through text-[10px]">
+                      {{ formatDateOnly(po.ex_fty_date) }}
+                    </span>
+                    <span class="text-alarm-600 dark:text-alarm-400 font-bold flex items-center gap-1">
+                      ⚠️ {{ formatDateOnly(po.revised_ex_fty_date) }}
+                    </span>
+                    <span class="bg-alarm-100 dark:bg-alarm-900/40 text-alarm-700 dark:text-alarm-300 text-[9px] px-1 py-0.2 rounded w-max font-semibold">
+                      REVISI
+                    </span>
+                  </div>
+                  <div v-else>
+                    <span class="font-semibold text-ink-700 dark:text-ink-200">
+                      {{ formatDateOnly(po.ex_fty_date) }}
+                    </span>
                   </div>
                 </td>
 

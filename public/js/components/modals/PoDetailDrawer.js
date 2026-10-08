@@ -103,7 +103,28 @@ export default {
             <div class="space-y-1.5 text-sm text-gray-200">
               <p><span class="text-gray-400 inline-block w-20">Style</span> : <span class="font-medium">{{ po.style_code }}</span></p>
               <p><span class="text-gray-400 inline-block w-20">Buyer</span> : <span class="font-medium">{{ po.buyer }}</span></p>
-              <p><span class="text-gray-400 inline-block w-20">Shipment</span> : <span class="font-medium text-red-400">{{ formatDate(po.ex_fty_date).split(',')[0] }}</span></p>
+              <p class="flex items-start">
+                <span class="text-gray-400 inline-block w-20 shrink-0">Shipment</span> : 
+                <span class="ml-1">
+                    <!-- Jika ada tanggal revisi dadakan -->
+                    <template v-if="po.revised_ex_fty_date">
+                    <span class="text-gray-500 line-through text-xs mr-2">
+                        {{ formatDate(po.ex_fty_date).split(',')[0] }}
+                    </span>
+                    <span class="font-bold text-red-400 bg-red-950/60 border border-red-800/60 px-2 py-0.5 rounded text-xs inline-flex items-center gap-1">
+                        ⚠️ {{ formatDate(po.revised_ex_fty_date).split(',')[0] }}
+                        <span class="text-[9px] bg-red-500 text-white px-1 rounded font-mono">REVISI</span>
+                    </span>
+                    </template>
+
+                    <!-- Jika tanggal normal -->
+                    <template v-else>
+                    <span class="font-medium text-red-400">
+                        {{ formatDate(po.ex_fty_date).split(',')[0] }}
+                    </span>
+                    </template>
+                </span>
+                </p>
             </div>
           </div>
 

@@ -7,11 +7,16 @@ export default {
   },
   emits: ["open-drawer"],
   setup() {
+    // Helper untuk format tanggal ringkas (YYYY-MM-DD)
+    const formatDateOnly = (val) => {
+      if (!val) return "-";
+      return val.split("T")[0];
+    };
+
     // Fungsi pintar untuk menggabungkan lokasi rak
     const getGlobalRack = (po) => {
       if (!po.colors || po.colors.length === 0) return "BELUM SET";
 
-      // 1. Ambil semua nama rak dari setiap warna, abaikan yang kosong atau 'BELUM SET'
       const racks = po.colors
         .map((c) => c.rack_location)
         .filter(
@@ -20,14 +25,17 @@ export default {
 
       if (racks.length === 0) return "BELUM SET";
 
-      // 2. Buang duplikat menggunakan Set (kalau semua warna di F1, array jadinya cuma ['F1'])
       const uniqueRacks = [...new Set(racks)];
-
-      // 3. Gabungkan dengan koma
       return uniqueRacks.join(", ");
     };
 
-    return { getBuyerBadgeClass, getStatusBadge, isUrgentPO, getGlobalRack };
+    return {
+      getBuyerBadgeClass,
+      getStatusBadge,
+      isUrgentPO,
+      getGlobalRack,
+      formatDateOnly,
+    };
   },
   template: `
     <div
@@ -54,8 +62,26 @@ export default {
         </div>
       </div>
 
-      <!-- Ringkasan Global PO -->
+      <!-- Ringkasan Global PO & Tanggal Shipment -->
       <div class="p-4 flex-1 space-y-2">
+        <div class="flex justify-between items-center text-xs font-mono pb-2 border-b border-ink-100 dark:border-ink-700/60">
+           <span class="text-gray-500 dark:text-gray-400">Ex-Fty Date:</span>
+           
+           <!-- Tampilan Tanggal Shipment / Revisi Dadakan -->
+           <div v-if="po.revised_ex_fty_date" class="text-right">
+             <span class="line-through text-ink-400 text-[10px] mr-1 block">
+               {{ formatDateOnly(po.ex_fty_date) }}
+             </span>
+             <span class="text-alarm-600 dark:text-alarm-400 font-bold bg-alarm-50 dark:bg-alarm-900/30 px-1.5 py-0.5 rounded border border-alarm-200 dark:border-alarm-800 text-[11px] inline-flex items-center gap-1">
+               ⚠️ {{ formatDateOnly(po.revised_ex_fty_date) }}
+             </span>
+           </div>
+
+           <span v-else class="font-bold text-ink-900 dark:text-white">
+             {{ formatDateOnly(po.ex_fty_date) }}
+           </span>
+        </div>
+
         <div class="flex justify-between items-center text-sm font-mono">
            <span class="text-gray-500 dark:text-gray-400">Total Warna:</span>
            <span class="font-bold text-ink-900 dark:text-white">{{ po.colors ? po.colors.length : 0 }} Col</span>
