@@ -1,4 +1,4 @@
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, watch } = Vue;
 
 import { DEFAULT_BUYERS } from "./constants.js";
 import { isUrgentPO } from "./utils.js";
@@ -70,9 +70,11 @@ const app = createApp({
       fetchData();
     };
 
-    // State Aplikasi Utama
+    // State Aplikasi Utama & Tab Logic V6
     const isDarkMode = ref(localStorage.getItem("theme") === "dark");
-    const activeTab = ref("helper");
+    const activeTab = ref("admin"); // 'admin' | 'helper'
+    const adminSubTab = ref("active"); // 'active' | 'overdue' | 'shipped' | 'archive' (sesuai index.html)
+
     const isLoading = ref(true);
     const items = ref([]);
     const buyers = ref([...DEFAULT_BUYERS]);
@@ -99,24 +101,24 @@ const app = createApp({
     const showPoDrawer = ref(false);
     const showCartonInModal = ref(false);
     const showCartonOutModal = ref(false);
-    const selectedPO = ref(null); // Menyimpan data PO yang sedang diklik untuk Drawer
+    const selectedPO = ref(null); // Data PO aktif untuk Drawer & Modal Karton
 
     const activePO = ref({});
     const activeColor = ref({});
 
-    // --- FUNGSI TRIGGER DRAWER V6 ---
+    // --- FUNGSI TRIGGER DRAWER & MODAL V6 ---
     const openPoDrawer = (po) => {
       selectedPO.value = po;
       showPoDrawer.value = true;
     };
 
     const openCartonInModal = (po) => {
-      selectedPO.value = po;
+      selectedPO.value = po || selectedPO.value;
       showCartonInModal.value = true;
     };
 
     const openCartonOutModal = (po) => {
-      selectedPO.value = po;
+      selectedPO.value = po || selectedPO.value;
       showCartonOutModal.value = true;
     };
 
@@ -452,7 +454,6 @@ const app = createApp({
       placementForm.value = {
         color_id: color.id,
         rack_location: color.rack_location || "",
-        // carton_qty & helper_name tidak perlu dikirim lagi dari form ini
         carton_qty: color.carton_qty || 0,
         helper_name:
           color.helper_name || currentUser.value?.username || "Helper",
@@ -537,12 +538,83 @@ const app = createApp({
       window.print();
     };
 
+    // --- LOGIKA PENGELOMPOKAN SUB-TAB ADMIN V6 ---
+    const todayStr = computed(() => new Date().toISOString().split("T")[0]);
+
+    const activePOsList = computed(() => {
+      return items.value.filter((po) => {
+        if (po.status === "Shipped" || po.status === "Archived") return false;
+        const poDate = po.revised_ex_fty_date || po.ex_fty_date;
+        if (!poDate) return true;
+        const cleanDate = poDate.split("T")[0];
+        return cleanDate >= todayStr.value;
+      });
+    });
+
+    const overduePOsList = computed(() => {
+      return items.value.filter((po) => {
+        if (po.status === "Shipped" || po.status === "Archived") return false;
+        const poDate = po.revised_ex_fty_date || po.ex_fty_date;
+        if (!poDate) return false;
+        const cleanDate = poDate.split("T")[0];
+        return cleanDate < todayStr.value;
+      });
+    });
+
+    const shippedPOsList = computed(() => {
+      return items.value.filter((po) => po.status === "Shipped");
+    });
+
+    const archivedPOsList = computed(() => {
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const now = new Date().getTime();
+
+      return items.value.filter((po) => {
+        if (po.status === "Archived") return true;
+        if (po.status === "Shipped" && po.updated_at) {
+          const updatedAt = new Date(po.updated_at).getTime();
+          return now - updatedAt > SEVEN_DAYS_MS;
+        }
+        return false;
+      });
+    });
+
+    // Badge counts untuk index.html
+    const activePOsCount = computed(() => activePOsList.value.length);
+    const overduePOsCount = computed(() => overduePOsList.value.length);
+    const shippedPOsCount = computed(() => shippedPOsList.value.length);
+    const archivedPOsCount = computed(() => archivedPOsList.value.length);
+
     const criticalPOs = computed(() =>
       items.value.filter((po) => isUrgentPO(po)),
     );
 
+    // Filter PO berdasarkan Tab/Sub-Tab & Search
     const filteredPOs = computed(() => {
-      return items.value.filter((po) => {
+      let sourceList = items.value;
+
+      if (activeTab.value === "admin") {
+        switch (adminSubTab.value) {
+          case "overdue":
+            sourceList = overduePOsList.value;
+            break;
+          case "shipped":
+            sourceList = shippedPOsList.value;
+            break;
+          case "archive":
+            sourceList = archivedPOsList.value;
+            break;
+          case "active":
+          default:
+            sourceList = activePOsList.value;
+            break;
+        }
+      } else if (activeTab.value === "helper") {
+        // Helper fokus ke Active + Overdue yang butuh penataan karton
+        sourceList = [...activePOsList.value, ...overduePOsList.value];
+      }
+
+      return sourceList.filter((po) => {
         if (filterUrgentOnly.value) {
           if (!isUrgentPO(po)) return false;
         }
@@ -597,7 +669,7 @@ const app = createApp({
       showUserModal,
       showAuditTrailModal,
 
-      // -- RETURN STATE & FUNGSI V6 --
+      // State V6
       showPoDrawer,
       showCartonInModal,
       showCartonOutModal,
@@ -605,12 +677,18 @@ const app = createApp({
       openPoDrawer,
       openCartonInModal,
       openCartonOutModal,
-      fetchData, // Diekspos agar bisa di-call dari modal sukses
+      fetchData,
 
       logout,
       onLoginSuccess,
       isDarkMode,
       activeTab,
+      adminSubTab, // Bind dengan sub-tab di index.html
+      activePOsCount,
+      overduePOsCount,
+      shippedPOsCount,
+      archivedPOsCount,
+
       isLoading,
       items,
       buyers,
