@@ -175,11 +175,13 @@
                 :search="searchQuery"
                 :buyer="selectedBuyerFilter"
                 :status="selectedStatusFilter"
+                :date="selectedDateFilter"
                 :buyers="buyers"
                 :show-reset="hasActiveFilters"
                 @update:search="searchQuery = $event"
                 @update:buyer="selectedBuyerFilter = $event"
                 @update:status="selectedStatusFilter = $event"
+                @update:date="selectedDateFilter = $event"
                 @reset="resetFilters"
               ></filter-toolbar>
             </div>

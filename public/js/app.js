@@ -88,10 +88,11 @@ const app = createApp({
     const searchQuery = ref("");
     const selectedBuyerFilter = ref("");
     const selectedStatusFilter = ref("");
+    const selectedDateFilter = ref(""); // State Filter Tanggal Shipment Baru
     const filterUrgentOnly = ref(false);
     const message = ref("");
 
-    // State Modals Lama
+    // State Modals
     const showPlacementModal = ref(false);
     const showEditModal = ref(false);
     const showInspectionModal = ref(false);
@@ -101,7 +102,7 @@ const app = createApp({
     const showPoDrawer = ref(false);
     const showCartonInModal = ref(false);
     const showCartonOutModal = ref(false);
-    const selectedPO = ref(null); // Data PO aktif untuk Drawer & Modal Karton
+    const selectedPO = ref(null);
 
     const activePO = ref({});
     const activeColor = ref({});
@@ -187,7 +188,6 @@ const app = createApp({
         const resData = await api.getPOs();
         if (resData.ok) {
           items.value = await resData.json();
-          // Jika Drawer sedang terbuka, perbarui data selectedPO secara reaktif
           if (showPoDrawer.value && selectedPO.value) {
             const updatedPO = items.value.find(
               (p) => p.id === selectedPO.value.id,
@@ -234,6 +234,7 @@ const app = createApp({
       searchQuery.value = "";
       selectedBuyerFilter.value = "";
       selectedStatusFilter.value = "";
+      selectedDateFilter.value = ""; // Reset filter tanggal
       filterUrgentOnly.value = false;
     };
 
@@ -548,7 +549,7 @@ const app = createApp({
       return statusLower.includes("shipped");
     };
 
-    // Helper kecil untuk mendapatkan tanggal acuan shipment
+    // Helper kecil untuk mendapatkan tanggal acuan shipment (Revisi / Ex-Fty)
     const getEffectiveShipmentDate = (po) => {
       const d = po.revised_ex_fty_date || po.ex_fty_date;
       return d ? d.split("T")[0] : null;
@@ -613,7 +614,7 @@ const app = createApp({
       items.value.filter((po) => isUrgentPO(po)),
     );
 
-    // Filter PO berdasarkan Tab/Sub-Tab & Search
+    // Filter PO berdasarkan Tab/Sub-Tab & Filter Interaktif (Search, Buyer, Status, Date)
     const filteredPOs = computed(() => {
       let sourceList = items.value;
 
@@ -634,7 +635,6 @@ const app = createApp({
             break;
         }
       } else if (activeTab.value === "helper") {
-        // Helper fokus ke Active + Overdue yang butuh penataan karton
         sourceList = [...activePOsList.value, ...overduePOsList.value];
       }
 
@@ -654,6 +654,15 @@ const app = createApp({
         ) {
           return false;
         }
+
+        // --- FILTER TANGGAL SHIPMENT ---
+        if (selectedDateFilter.value) {
+          const effectiveDate = getEffectiveShipmentDate(po);
+          if (effectiveDate !== selectedDateFilter.value) {
+            return false;
+          }
+        }
+
         if (searchQuery.value) {
           const q = searchQuery.value.toLowerCase();
           const matchPO =
@@ -683,6 +692,7 @@ const app = createApp({
           searchQuery.value ||
           selectedBuyerFilter.value ||
           selectedStatusFilter.value ||
+          selectedDateFilter.value ||
           filterUrgentOnly.value
         ),
     );
@@ -707,7 +717,7 @@ const app = createApp({
       onLoginSuccess,
       isDarkMode,
       activeTab,
-      adminSubTab, // Bind dengan sub-tab di index.html
+      adminSubTab,
       activePOsCount,
       overduePOsCount,
       shippedPOsCount,
@@ -720,6 +730,7 @@ const app = createApp({
       searchQuery,
       selectedBuyerFilter,
       selectedStatusFilter,
+      selectedDateFilter, // Diekspos agar bisa di-bind di FilterToolbar
       filterUrgentOnly,
       message,
       showPlacementModal,
