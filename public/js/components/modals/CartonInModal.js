@@ -46,7 +46,7 @@ export default {
       try {
         const payload = {
           po_id: props.po.id,
-          color_id: selectedColorId.value, // Ngirim ID warna ke backend
+          color_id: selectedColorId.value,
           quantity: parseInt(quantity.value),
           notes: notes.value,
         };
@@ -127,12 +127,12 @@ export default {
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Keterangan / Rak (Opsional)</label>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Catatan Tambahan (Opsional)</label>
             <textarea 
               v-model="notes" 
               rows="2"
               class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block p-3" 
-              placeholder="Misal: Ditaruh di Rak F2..."
+              placeholder="Misal: Kondisi karton mulus..."
             ></textarea>
           </div>
         </div>

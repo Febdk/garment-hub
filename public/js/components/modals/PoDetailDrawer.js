@@ -107,21 +107,17 @@ export default {
             </div>
           </div>
 
-          <!-- 2. Tracking Karton Global -->
+          <!-- 2. Global Karton (Tanpa Status "Di Rak") -->
           <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
             <h3 class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">Global Karton (Semua Warna)</h3>
-            <div class="grid grid-cols-3 gap-2 text-center">
-              <div class="bg-gray-900/50 p-2 rounded-lg border border-gray-700/50">
+            <div class="grid grid-cols-2 gap-3 text-center">
+              <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/50">
                 <p class="text-[10px] text-gray-400 uppercase mb-1">Masuk</p>
-                <p class="text-xl font-bold text-green-400">{{ po.qty_in || 0 }}</p>
+                <p class="text-2xl font-bold text-green-400">{{ po.qty_in || 0 }}</p>
               </div>
-              <div class="bg-gray-900/50 p-2 rounded-lg border border-gray-700/50">
+              <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/50">
                 <p class="text-[10px] text-gray-400 uppercase mb-1">Keluar</p>
-                <p class="text-xl font-bold text-red-400">{{ po.qty_out || 0 }}</p>
-              </div>
-              <div class="bg-gray-900 p-2 rounded-lg border border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.1)]">
-                <p class="text-[10px] text-yellow-400 uppercase mb-1">Di Rak</p>
-                <p class="text-xl font-bold text-white">{{ (po.qty_in || 0) - (po.qty_out || 0) }}</p>
+                <p class="text-2xl font-bold text-red-400">{{ po.qty_out || 0 }}</p>
               </div>
             </div>
             
