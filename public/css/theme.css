@@ -184,11 +184,18 @@ html.dark body table td {
   border-bottom-color: rgba(51, 65, 85, 0.6);
 }
 
+html body table tbody tr:nth-child(even) td {
+  background: rgba(248, 250, 252, 0.7);
+}
+html.dark body table tbody tr:nth-child(even) td {
+  background: rgba(30, 41, 59, 0.7);
+}
+
 html body table tbody tr:hover td {
-  background: rgba(241, 245, 249, 0.4);
+  background: rgba(226, 232, 240, 0.5);
 }
 html.dark body table tbody tr:hover td {
-  background: rgba(30, 41, 59, 0.4);
+  background: rgba(51, 65, 85, 0.5);
 }
 
 /* Stats Cards */
@@ -283,17 +290,21 @@ html:not(.dark) body {
     padding: 0.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
+  html body .po-table tbody tr.po-row:nth-child(even) {
+    background: #f8fafc;
+  }
   html.dark body .po-table tbody tr.po-row {
     background: #1e293b;
     border-color: rgba(51, 65, 85, 1);
   }
+  html.dark body .po-table tbody tr.po-row:nth-child(even) {
+    background: #0f172a;
+  }
   html body .po-table td {
     padding: 0.75rem;
     border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    text-align: right;
+    min-height: 2.5rem;
+    background-color: transparent !important;
   }
   html.dark body .po-table td {
     border-bottom-color: rgba(51, 65, 85, 0.5);
@@ -301,12 +312,26 @@ html:not(.dark) body {
   html body .po-table td:last-child {
     border-bottom: none;
   }
+  html body .po-table td[data-label] {
+    display: grid;
+    grid-template-columns: 35% 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: right;
+  }
+  html body .po-table td[data-label] > * {
+    justify-self: end;
+  }
   html body .po-table td[data-label]::before {
     content: attr(data-label);
-    display: block;
     font-size: 0.75rem;
     font-weight: 600;
     color: #64748b;
+    text-align: left;
+    justify-self: start;
+  }
+  html body .po-table td:not([data-label]) {
+    display: block;
     text-align: left;
   }
   
