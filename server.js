@@ -729,9 +729,9 @@ app.get("/api/verify-token", authenticateToken, (req, res) => {
 // API TRACKING KARTON (GARMENT HUB V6)
 // =========================================================================
 
-// 1. Catat Karton Masuk
+// 1. Catat Karton Masuk (Update PO Global + Update po_colors Spesifik)
 app.post("/api/cartons/in", authenticateToken, async (req, res) => {
-  const { po_id, quantity, notes } = req.body;
+  const { po_id, color_id, quantity, notes } = req.body;
   const recorded_by = req.user.id;
 
   if (!po_id || !quantity) {
@@ -739,11 +739,21 @@ app.post("/api/cartons/in", authenticateToken, async (req, res) => {
   }
 
   try {
+    // 1. Update total qty_in di tabel purchase_orders
     await db.query(
       "UPDATE purchase_orders SET qty_in = qty_in + ? WHERE id = ?",
       [quantity, po_id],
     );
 
+    // 2. Update carton_qty di tabel po_colors secara spesifik jika color_id dikirim
+    if (color_id) {
+      await db.query(
+        "UPDATE po_colors SET carton_qty = carton_qty + ? WHERE id = ?",
+        [quantity, color_id],
+      );
+    }
+
+    // 3. Rekam jejak di carton_movements
     await db.query(
       "INSERT INTO carton_movements (po_id, type, quantity, reason, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?)",
       [po_id, "IN", quantity, "Karton Masuk", notes || "", recorded_by || null],
@@ -752,7 +762,7 @@ app.post("/api/cartons/in", authenticateToken, async (req, res) => {
     await recordLog(
       req.user.username,
       "CARTON_IN",
-      `Mencatat ${quantity} karton masuk untuk PO ID #${po_id}`,
+      `Mencatat ${quantity} karton masuk untuk PO ID #${po_id}${color_id ? ` (Color ID #${color_id})` : ""}`,
     );
 
     res.json({ success: true, message: "Karton masuk berhasil dicatat" });
@@ -762,9 +772,9 @@ app.post("/api/cartons/in", authenticateToken, async (req, res) => {
   }
 });
 
-// 2. Catat Karton Keluar
+// 2. Catat Karton Keluar (Update PO Global + Update po_colors Spesifik)
 app.post("/api/cartons/out", authenticateToken, async (req, res) => {
-  const { po_id, quantity, reason, notes } = req.body;
+  const { po_id, color_id, quantity, reason, notes } = req.body;
   const recorded_by = req.user.id;
 
   if (!po_id || !quantity) {
@@ -772,11 +782,21 @@ app.post("/api/cartons/out", authenticateToken, async (req, res) => {
   }
 
   try {
+    // 1. Update total qty_out di tabel purchase_orders
     await db.query(
       "UPDATE purchase_orders SET qty_out = qty_out + ? WHERE id = ?",
       [quantity, po_id],
     );
 
+    // 2. Kurangi carton_qty di tabel po_colors secara spesifik jika color_id dikirim
+    if (color_id) {
+      await db.query(
+        "UPDATE po_colors SET carton_qty = GREATEST(0, carton_qty - ?) WHERE id = ?",
+        [quantity, color_id],
+      );
+    }
+
+    // 3. Rekam jejak di carton_movements
     await db.query(
       "INSERT INTO carton_movements (po_id, type, quantity, reason, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?)",
       [
@@ -792,7 +812,7 @@ app.post("/api/cartons/out", authenticateToken, async (req, res) => {
     await recordLog(
       req.user.username,
       "CARTON_OUT",
-      `Mencatat ${quantity} karton keluar untuk PO ID #${po_id}`,
+      `Mencatat ${quantity} karton keluar untuk PO ID #${po_id}${color_id ? ` (Color ID #${color_id})` : ""}`,
     );
 
     res.json({ success: true, message: "Karton keluar berhasil dicatat" });
@@ -828,6 +848,6 @@ app.get(/(.*)/, (req, res) => {
 
 // ── Start Server ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, () => {g
   console.log(`🚀 Server berjalan aman di http://localhost:${PORT}`);
 });
