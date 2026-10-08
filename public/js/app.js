@@ -541,53 +541,60 @@ const app = createApp({
     // --- LOGIKA PENGELOMPOKAN SUB-TAB ADMIN V6 ---
     const todayStr = computed(() => new Date().toISOString().split("T")[0]);
 
-    // Helper kecil untuk mendapatkan tanggal acuan shipment (Revised Date jika ada, else Ex-Fty Date)
+    // Helper untuk mengecek apakah PO sudah Shipped
+    const isShippedPO = (po) => {
+      if (!po.status) return false;
+      const statusLower = po.status.toLowerCase();
+      return statusLower.includes("shipped");
+    };
+
+    // Helper kecil untuk mendapatkan tanggal acuan shipment
     const getEffectiveShipmentDate = (po) => {
       const d = po.revised_ex_fty_date || po.ex_fty_date;
       return d ? d.split("T")[0] : null;
     };
 
-    // 1. ACTIVE: Shipment date >= hari ini (atau belum diset) & belum Shipped/Archived
+    // 1. ACTIVE
     const activePOsList = computed(() => {
       return items.value.filter((po) => {
-        if (po.status === "Shipped" || po.status === "Archived") return false;
+        if (isShippedPO(po) || po.status === "Archived") return false;
         const shipDate = getEffectiveShipmentDate(po);
         if (!shipDate) return true;
         return shipDate >= todayStr.value;
       });
     });
 
-    // 2. OVERDUE: Shipment date < hari ini & belum Shipped/Archived
+    // 2. OVERDUE
     const overduePOsList = computed(() => {
       return items.value.filter((po) => {
-        if (po.status === "Shipped" || po.status === "Archived") return false;
+        if (isShippedPO(po) || po.status === "Archived") return false;
         const shipDate = getEffectiveShipmentDate(po);
         if (!shipDate) return false;
         return shipDate < todayStr.value;
       });
     });
 
-    // 3. SHIPPED: Status = 'Shipped' DAN berusia <= 7 hari (belum masuk archive otomatis)
+    // 3. SHIPPED
     const shippedPOsList = computed(() => {
       const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
       const now = new Date().getTime();
 
       return items.value.filter((po) => {
-        if (po.status !== "Shipped") return false;
+        if (!isShippedPO(po)) return false;
         if (!po.updated_at) return true;
         const updatedAt = new Date(po.updated_at).getTime();
         return now - updatedAt <= SEVEN_DAYS_MS;
       });
     });
 
-    // 4. ARCHIVE: Status = 'Archived' OR (Status = 'Shipped' & > 7 hari)
+    // 4. ARCHIVE
     const archivedPOsList = computed(() => {
       const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
       const now = new Date().getTime();
 
       return items.value.filter((po) => {
         if (po.status === "Archived") return true;
-        if (po.status === "Shipped") {
+        if (isShippedPO(po)) {
           if (!po.updated_at) return false;
           const updatedAt = new Date(po.updated_at).getTime();
           return now - updatedAt > SEVEN_DAYS_MS;
