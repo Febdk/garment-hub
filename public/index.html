@@ -227,11 +227,73 @@
             </div>
 
             <!-- TAB 2: ADMIN RECORD DASHBOARD -->
-            <div v-if="activeTab === 'admin'" class="space-y-6">
+            <div v-if="activeTab === 'admin'" class="space-y-4">
+              <!-- ===== NAVIGASI SUB-TAB ADMIN ===== -->
+              <div
+                class="no-print -mx-4 sm:mx-0 overflow-x-auto pb-2 mb-2 scrollbar-hide"
+              >
+                <div class="flex gap-2 px-4 sm:px-0 w-max">
+                  <button
+                    @click="adminSubTab = 'active'"
+                    :class="adminSubTab === 'active' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
+                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
+                  >
+                    Active
+                    <span
+                      :class="adminSubTab === 'active' ? 'bg-indigo-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
+                      class="px-1.5 py-0.5 rounded text-[10px]"
+                    >
+                      {{ activePOsCount || 0 }}
+                    </span>
+                  </button>
+                  <button
+                    @click="adminSubTab = 'overdue'"
+                    :class="adminSubTab === 'overdue' ? 'bg-alarm-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
+                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
+                  >
+                    Overdue
+                    <span
+                      :class="adminSubTab === 'overdue' ? 'bg-alarm-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
+                      class="px-1.5 py-0.5 rounded text-[10px]"
+                    >
+                      {{ overduePOsCount || 0 }}
+                    </span>
+                  </button>
+                  <button
+                    @click="adminSubTab = 'shipped'"
+                    :class="adminSubTab === 'shipped' ? 'bg-stamp-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
+                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
+                  >
+                    Shipped
+                    <span
+                      :class="adminSubTab === 'shipped' ? 'bg-stamp-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
+                      class="px-1.5 py-0.5 rounded text-[10px]"
+                    >
+                      {{ shippedPOsCount || 0 }}
+                    </span>
+                  </button>
+                  <button
+                    @click="adminSubTab = 'archive'"
+                    :class="adminSubTab === 'archive' ? 'bg-ink-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
+                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
+                  >
+                    Archive
+                    <span
+                      :class="adminSubTab === 'archive' ? 'bg-ink-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
+                      class="px-1.5 py-0.5 rounded text-[10px]"
+                    >
+                      {{ archivedPOsCount || 0 }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <!-- =================================== -->
+
               <div>
                 <!-- Tabel Master PO (INI YANG AKAN TAMPIL BERSIH SAAT DICETAK) -->
                 <po-table
                   :pos="filteredPOs"
+                  :active-sub-tab="adminSubTab"
                   @edit="openEditModal"
                   @delete="deletePO"
                   @status-change="handleStatusChange"
@@ -319,6 +381,18 @@
         @close="showUserModal = false"
       ></user-management-modal>
     </div>
+
+    <style>
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      /* Hide scrollbar for IE, Edge and Firefox */
+      .scrollbar-hide {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+      }
+    </style>
 
     <script type="module" src="/js/app.js"></script>
     <script>
