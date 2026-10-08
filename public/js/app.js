@@ -445,14 +445,17 @@ const app = createApp({
       }
     };
 
+    // Open Helper Placement Modal (Set Rak Murni)
     const openPlacementModal = (po, color) => {
       activePO.value = po;
       activeColor.value = color;
       placementForm.value = {
         color_id: color.id,
-        carton_qty: color.carton_qty || color.total_qty,
         rack_location: color.rack_location || "",
-        helper_name: color.helper_name || "",
+        // carton_qty & helper_name tidak perlu dikirim lagi dari form ini
+        carton_qty: color.carton_qty || 0,
+        helper_name:
+          color.helper_name || currentUser.value?.username || "Helper",
       };
       showPlacementModal.value = true;
     };
