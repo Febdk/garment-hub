@@ -848,6 +848,6 @@ app.get(/(.*)/, (req, res) => {
 
 // ── Start Server ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {g
+app.listen(PORT, () => {
   console.log(`🚀 Server berjalan aman di http://localhost:${PORT}`);
 });
