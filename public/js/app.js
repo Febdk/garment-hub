@@ -76,9 +76,10 @@ const app = createApp({
       fetchData();
     };
 
-    // State Aplikasi Utama
+    // State Aplikasi Utama & Tab Logic
     const isDarkMode = ref(localStorage.getItem("theme") === "dark");
-    const activeTab = ref("helper");
+    const activeTab = ref("admin"); // 'admin' | 'helper'
+    const adminSubTab = ref("active"); // 'active' | 'overdue' | 'shipped' | 'archive'
     const isLoading = ref(true);
     const items = ref([]);
     const buyers = ref([...DEFAULT_BUYERS]);
@@ -92,6 +93,7 @@ const app = createApp({
     const searchQuery = ref("");
     const selectedBuyerFilter = ref("");
     const selectedStatusFilter = ref("");
+    const selectedDateFilter = ref("");
     const filterUrgentOnly = ref(false);
     const message = ref("");
 
@@ -238,6 +240,7 @@ const app = createApp({
       searchQuery.value = "";
       selectedBuyerFilter.value = "";
       selectedStatusFilter.value = "";
+      selectedDateFilter.value = "";
       filterUrgentOnly.value = false;
     };
 
@@ -543,6 +546,77 @@ const app = createApp({
       window.print();
     };
 
+    // --- LOGIKA PENGELOMPOKAN SUB-TAB ADMIN V6 ---
+    const todayStr = computed(() => new Date().toISOString().split("T")[0]);
+
+    // Helper untuk mengecek apakah PO sudah Shipped
+    const isShippedPO = (po) => {
+      if (!po.status) return false;
+      const statusLower = po.status.toLowerCase();
+      return statusLower.includes("shipped");
+    };
+
+    // Helper kecil untuk mendapatkan tanggal acuan shipment (Revisi / Ex-Fty)
+    const getEffectiveShipmentDate = (po) => {
+      const d = po.revised_ex_fty_date || po.ex_fty_date;
+      return d ? d.split("T")[0] : null;
+    };
+
+    // 1. ACTIVE
+    const activePOsList = computed(() => {
+      return items.value.filter((po) => {
+        if (isShippedPO(po) || po.status === "Archived") return false;
+        const shipDate = getEffectiveShipmentDate(po);
+        if (!shipDate) return true;
+        return shipDate >= todayStr.value;
+      });
+    });
+
+    // 2. OVERDUE
+    const overduePOsList = computed(() => {
+      return items.value.filter((po) => {
+        if (isShippedPO(po) || po.status === "Archived") return false;
+        const shipDate = getEffectiveShipmentDate(po);
+        if (!shipDate) return false;
+        return shipDate < todayStr.value;
+      });
+    });
+
+    // 3. SHIPPED
+    const shippedPOsList = computed(() => {
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const now = new Date().getTime();
+
+      return items.value.filter((po) => {
+        if (!isShippedPO(po)) return false;
+        if (!po.updated_at) return true;
+        const updatedAt = new Date(po.updated_at).getTime();
+        return now - updatedAt <= SEVEN_DAYS_MS;
+      });
+    });
+
+    // 4. ARCHIVE
+    const archivedPOsList = computed(() => {
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const now = new Date().getTime();
+
+      return items.value.filter((po) => {
+        if (po.status === "Archived") return true;
+        if (isShippedPO(po)) {
+          if (!po.updated_at) return false;
+          const updatedAt = new Date(po.updated_at).getTime();
+          return now - updatedAt > SEVEN_DAYS_MS;
+        }
+        return false;
+      });
+    });
+
+    // Badge counts untuk index.html
+    const activePOsCount = computed(() => activePOsList.value.length);
+    const overduePOsCount = computed(() => overduePOsList.value.length);
+    const shippedPOsCount = computed(() => shippedPOsList.value.length);
+    const archivedPOsCount = computed(() => archivedPOsList.value.length);
+
     const criticalPOs = computed(() =>
       items.value.filter((po) => isUrgentPO(po)),
     );
@@ -553,8 +627,31 @@ const app = createApp({
       items.value.map((po) => po.po_number),
     );
 
+    // Filter PO berdasarkan Tab/Sub-Tab & Filter Interaktif (Search, Buyer, Status, Date)
     const filteredPOs = computed(() => {
-      return items.value.filter((po) => {
+      let sourceList = items.value;
+
+      if (activeTab.value === "admin") {
+        switch (adminSubTab.value) {
+          case "overdue":
+            sourceList = overduePOsList.value;
+            break;
+          case "shipped":
+            sourceList = shippedPOsList.value;
+            break;
+          case "archive":
+            sourceList = archivedPOsList.value;
+            break;
+          case "active":
+          default:
+            sourceList = activePOsList.value;
+            break;
+        }
+      } else if (activeTab.value === "helper") {
+        sourceList = [...activePOsList.value, ...overduePOsList.value];
+      }
+
+      return sourceList.filter((po) => {
         if (filterUrgentOnly.value) {
           if (!isUrgentPO(po)) return false;
         }
@@ -569,6 +666,13 @@ const app = createApp({
           po.status !== selectedStatusFilter.value
         ) {
           return false;
+        }
+        // --- FILTER TANGGAL SHIPMENT ---
+        if (selectedDateFilter.value) {
+          const effectiveDate = getEffectiveShipmentDate(po);
+          if (effectiveDate !== selectedDateFilter.value) {
+            return false;
+          }
         }
         if (searchQuery.value) {
           const q = searchQuery.value.toLowerCase();
@@ -599,6 +703,7 @@ const app = createApp({
           searchQuery.value ||
           selectedBuyerFilter.value ||
           selectedStatusFilter.value ||
+          selectedDateFilter.value ||
           filterUrgentOnly.value
         ),
     );
@@ -627,6 +732,11 @@ const app = createApp({
       onLoginSuccess,
       isDarkMode,
       activeTab,
+      adminSubTab,
+      activePOsCount,
+      overduePOsCount,
+      shippedPOsCount,
+      archivedPOsCount,
       isLoading,
       items,
       buyers,
@@ -634,6 +744,7 @@ const app = createApp({
       searchQuery,
       selectedBuyerFilter,
       selectedStatusFilter,
+      selectedDateFilter,
       filterUrgentOnly,
       message,
       showPlacementModal,

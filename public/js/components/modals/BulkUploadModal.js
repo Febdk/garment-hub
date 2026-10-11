@@ -2,18 +2,40 @@ import { bulkCreatePO } from "../../api.js";
 
 const { ref, computed } = Vue;
 
-// Header kolom yang dikenali di file Excel/CSV. Urutan kolom di file bebas
-// (dibaca berdasarkan nama header, bukan posisi), tapi NAMA header harus
-// sama persis dengan ini (tidak case-sensitive, spasi di awal/akhir di-trim).
 const REQUIRED_PO_FIELDS = ["po_number", "buyer", "style_code", "ex_fty_date"];
+
+const HEADER_ALIASES = {
+  po: "po_number",
+  ponumber: "po_number",
+  no_po: "po_number",
+  nomor_po: "po_number",
+  buyer_name: "buyer",
+  nama_buyer: "buyer",
+  style: "style_code",
+  stylecode: "style_code",
+  kode_style: "style_code",
+  shipment: "ex_fty_date",
+  shipment_date: "ex_fty_date",
+  ex_fty: "ex_fty_date",
+  tgl_shipment: "ex_fty_date",
+  tanggal_shipment: "ex_fty_date",
+  color: "color_code",
+  warna: "color_code",
+  kode_warna: "color_code",
+  target_qty: "total_qty",
+  qty: "total_qty",
+  target_karton: "total_qty",
+  karton: "carton_qty",
+  fisik_karton: "carton_qty",
+  rak: "rack_location",
+  lokasi_rak: "rack_location",
+  helper: "helper_name",
+};
 
 export default {
   name: "BulkUploadModal",
   props: {
     show: { type: Boolean, required: true },
-    // Daftar po_number yang sudah ada di database — dipakai untuk
-    // menandai baris duplikat di preview SEBELUM dikirim ke server.
-    // Pengecekan final tetap dilakukan ulang di backend.
     existingPoNumbers: { type: Array, default: () => [] },
   },
   emits: ["close", "imported"],
@@ -52,6 +74,11 @@ export default {
     };
 
     const downloadTemplate = () => {
+      if (typeof XLSX === "undefined") {
+        parseError.value =
+          "Library Excel (SheetJS) belum selesai dimuat. Harap periksa koneksi internet lalu refresh halaman.";
+        return;
+      }
       const headers = [
         "po_number",
         "buyer",
@@ -71,11 +98,9 @@ export default {
         "018",
         "100",
         "0",
-        "",
-        "",
+        "R-01",
+        "Budi",
       ];
-      // Baris kedua contoh: PO sama dengan warna kedua (1 PO bisa punya
-      // beberapa baris warna, selama po_number/buyer/style_code/ex_fty_date-nya sama).
       const example2 = [
         "4702177999",
         "Polo Ralph Lauren",
@@ -84,8 +109,8 @@ export default {
         "019",
         "50",
         "0",
-        "",
-        "",
+        "R-01",
+        "Budi",
       ];
       const ws = XLSX.utils.aoa_to_sheet([headers, example1, example2]);
       ws["!cols"] = headers.map(() => ({ wch: 16 }));
@@ -94,10 +119,13 @@ export default {
       XLSX.writeFile(wb, "template-bulk-po.xlsx");
     };
 
-    const normalizeHeader = (key) =>
-      String(key || "")
+    const normalizeHeader = (key) => {
+      const cleanKey = String(key || "")
         .trim()
-        .toLowerCase();
+        .toLowerCase()
+        .replace(/[\s\-]+/g, "_");
+      return HEADER_ALIASES[cleanKey] || cleanKey;
+    };
 
     const normalizeDate = (val) => {
       if (val === null || val === undefined || val === "") return "";
@@ -107,10 +135,18 @@ export default {
         const d = String(val.getDate()).padStart(2, "0");
         return `${y}-${m}-${d}`;
       }
+      // Dukung format serial date bawaan Excel (misal 46310)
+      if (typeof val === "number" && val > 20000 && val < 60000) {
+        const dateObj = new Date(Math.round((val - 25569) * 86400 * 1000));
+        const y = dateObj.getUTCFullYear();
+        const m = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(dateObj.getUTCDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
       const str = String(val).trim();
       if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
-      // Dukung format umum DD/MM/YYYY (lokal ID) juga
-      const m1 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      // Format DD/MM/YYYY atau DD-MM-YYYY
+      const m1 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
       if (m1) {
         const [, d, mo, y] = m1;
         return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
@@ -121,6 +157,11 @@ export default {
     const parseFile = async (file) => {
       resetState();
       fileName.value = file.name;
+      if (typeof XLSX === "undefined") {
+        parseError.value =
+          "Library Excel (SheetJS) belum selesai dimuat. Harap periksa koneksi lalu refresh halaman.";
+        return;
+      }
       isParsing.value = true;
       try {
         const data = await file.arrayBuffer();
@@ -145,11 +186,11 @@ export default {
           (f) => !(f in normalizedRows[0]),
         );
         if (missingHeader) {
-          parseError.value = `Kolom "${missingHeader}" tidak ditemukan di file. Pastikan pakai template yang disediakan.`;
+          parseError.value = `Kolom wajib "${missingHeader}" tidak ditemukan di file. Gunakan template yang disediakan.`;
           return;
         }
 
-        // Group baris jadi per PO (po_number sama = 1 PO, boleh beberapa baris warna)
+        // Group baris per PO (po_number sama = 1 PO multi warna)
         const groups = new Map();
         const order = [];
         normalizedRows.forEach((row, idx) => {
@@ -261,53 +302,77 @@ export default {
   },
   template: `
     <div v-if="show" class="fixed inset-0 bg-ink-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div class="bg-white dark:bg-ink-800 rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-ink-200 dark:border-ink-600 my-8">
+      <div class="bg-white dark:bg-ink-800 rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-ink-200 dark:border-ink-700 my-8 space-y-4">
         <div class="flex justify-between items-center pb-3 border-b border-ink-100 dark:border-ink-700">
-          <h3 class="font-display text-base font-bold text-ink-900 dark:text-white">
-            Upload Massal PO
-          </h3>
-          <button type="button" @click="closeModal" class="text-ink-400 hover:text-ink-600 font-bold">✕</button>
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-hazard-50 dark:bg-hazard-900/40 text-hazard-600 dark:text-hazard-400 flex items-center justify-center font-bold">
+              ⬆
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-ink-900 dark:text-white">
+                Upload Massal PO (Excel / CSV)
+              </h3>
+              <p class="text-[11px] text-ink-400">Impor banyak data PO dan breakdown warnanya sekaligus</p>
+            </div>
+          </div>
+          <button type="button" @click="closeModal" class="p-1 rounded-lg text-ink-400 hover:text-ink-600 dark:hover:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-700 font-bold transition">✕</button>
         </div>
 
         <!-- STEP 1: Belum ada hasil import -->
-        <div v-if="!importResult" class="space-y-4 mt-4">
-          <div class="flex flex-wrap items-center gap-3 bg-paper-50 dark:bg-ink-700 p-3 rounded-xl border border-ink-200 dark:border-ink-600">
+        <div v-if="!importResult" class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-ink-50 dark:bg-ink-700/50 p-3.5 rounded-xl border border-ink-200 dark:border-ink-600">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📄</span>
+              <div>
+                <div class="text-xs font-bold text-ink-800 dark:text-ink-200">Format Template Resmi</div>
+                <div class="text-[11px] text-ink-500 dark:text-ink-400">Unduh template .xlsx agar urutan dan nama kolom sesuai</div>
+              </div>
+            </div>
             <button type="button" @click="downloadTemplate"
-              class="text-xs bg-white dark:bg-ink-800 border border-ink-300 dark:border-ink-600 text-ink-700 dark:text-ink-200 px-3 py-2 rounded-lg font-data font-bold hover:bg-ink-50 dark:hover:bg-ink-600 transition">
-              ⬇ Download Template
+              class="text-xs bg-white dark:bg-ink-800 border border-ink-300 dark:border-ink-600 text-ink-800 dark:text-ink-100 px-3.5 py-2 rounded-lg font-bold hover:bg-ink-100 dark:hover:bg-ink-700 transition flex items-center gap-1.5 shadow-xs">
+              <svg class="w-4 h-4 text-hazard-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              <span>Download Template Excel</span>
             </button>
-            <span class="text-xs text-ink-400">Isi template, lalu upload file-nya di bawah ini.</span>
           </div>
 
           <div>
-            <label class="block text-[11px] font-data font-bold text-ink-500 dark:text-ink-300 mb-1 uppercase">File Excel / CSV</label>
+            <label class="block text-[11px] font-bold text-ink-600 dark:text-ink-300 mb-1.5 uppercase tracking-wider">Pilih File Excel / CSV (.xlsx, .xls, .csv)</label>
             <input
               ref="fileInputRef"
               type="file"
               accept=".xlsx,.xls,.csv"
               @change="handleFileChange"
-              class="w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-hazard-500 file:text-ink-900 file:font-bold file:text-xs file:cursor-pointer bg-white dark:bg-ink-700 border border-ink-200 dark:border-ink-600 rounded-xl text-ink-600 dark:text-ink-300"
+              class="w-full text-xs file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:bg-hazard-600 file:text-white file:font-bold file:text-xs file:cursor-pointer bg-white dark:bg-ink-900 border border-ink-300 dark:border-ink-600 rounded-xl text-ink-600 dark:text-ink-300 cursor-pointer"
             />
           </div>
 
-          <div v-if="isParsing" class="text-center text-sm text-ink-400 py-6">
-            Membaca file...
+          <div v-if="isParsing" class="text-center text-sm text-ink-400 py-6 flex items-center justify-center gap-2">
+            <svg class="animate-spin w-5 h-5 text-hazard-600" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Membaca dan memvalidasi file...</span>
           </div>
 
-          <div v-if="parseError" class="p-3 bg-alarm-50 dark:bg-alarm-950/60 border border-alarm-200 dark:border-alarm-900 text-alarm-700 dark:text-alarm-300 rounded-xl text-xs font-semibold font-data">
-            {{ parseError }}
+          <div v-if="parseError" class="p-3.5 bg-alarm-50 dark:bg-alarm-900/30 border border-alarm-200 dark:border-alarm-800 text-alarm-700 dark:text-alarm-300 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span>{{ parseError }}</span>
           </div>
 
           <!-- PREVIEW TABLE -->
           <div v-if="parsedGroups.length > 0 && !isParsing" class="space-y-2">
-            <div class="flex items-center gap-3 text-xs font-data font-bold">
-              <span class="text-stamp-600 dark:text-stamp-400">{{ validGroups.length }} valid — akan diimport</span>
-              <span v-if="invalidGroups.length > 0" class="text-alarm-600 dark:text-alarm-400">{{ invalidGroups.length }} dilewati</span>
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-stamp-600 dark:text-stamp-400">✓ {{ validGroups.length }} PO siap diimpor</span>
+              <span v-if="invalidGroups.length > 0" class="text-alarm-600 dark:text-alarm-400">⚠ {{ invalidGroups.length }} PO dilewati (tidak valid)</span>
             </div>
             <div class="max-h-80 overflow-y-auto border border-ink-200 dark:border-ink-600 rounded-xl">
-              <table class="w-full text-xs font-data">
-                <thead class="bg-paper-100 dark:bg-ink-700 sticky top-0">
-                  <tr class="text-left text-ink-500 dark:text-ink-300 uppercase text-[10px]">
+              <table class="w-full text-xs">
+                <thead class="bg-ink-100/70 dark:bg-ink-700 sticky top-0">
+                  <tr class="text-left text-ink-600 dark:text-ink-300 uppercase text-[10px]">
                     <th class="px-3 py-2">Baris</th>
                     <th class="px-3 py-2">PO Number</th>
                     <th class="px-3 py-2">Buyer</th>
@@ -319,17 +384,17 @@ export default {
                 </thead>
                 <tbody>
                   <tr v-for="g in parsedGroups" :key="g.firstRow"
-                    :class="g.valid ? '' : 'bg-alarm-50 dark:bg-alarm-950/30'"
+                    :class="g.valid ? '' : 'bg-alarm-50/60 dark:bg-alarm-900/20'"
                     class="border-t border-ink-100 dark:border-ink-700">
-                    <td class="px-3 py-2 text-ink-400">{{ g.firstRow }}</td>
-                    <td class="px-3 py-2 font-semibold text-ink-800 dark:text-white">{{ g.po_number || '—' }}</td>
+                    <td class="px-3 py-2 text-ink-400 font-mono">{{ g.firstRow }}</td>
+                    <td class="px-3 py-2 font-mono font-bold text-ink-900 dark:text-white">{{ g.po_number || '—' }}</td>
                     <td class="px-3 py-2">{{ g.buyer || '—' }}</td>
-                    <td class="px-3 py-2">{{ g.style_code || '—' }}</td>
-                    <td class="px-3 py-2">{{ g.ex_fty_date || '—' }}</td>
+                    <td class="px-3 py-2 font-mono">{{ g.style_code || '—' }}</td>
+                    <td class="px-3 py-2 font-mono">{{ g.ex_fty_date || '—' }}</td>
                     <td class="px-3 py-2">{{ g.colors.length }} warna</td>
                     <td class="px-3 py-2">
                       <span v-if="g.valid" class="text-stamp-600 dark:text-stamp-400 font-bold">✓ Valid</span>
-                      <span v-else class="text-alarm-600 dark:text-alarm-400 font-bold" :title="g.reason">✕ {{ g.reason }}</span>
+                      <span v-else class="text-alarm-600 dark:text-alarm-400 font-semibold" :title="g.reason">✕ {{ g.reason }}</span>
                     </td>
                   </tr>
                 </tbody>
@@ -338,28 +403,33 @@ export default {
           </div>
 
           <div class="flex space-x-3 pt-3 border-t border-ink-100 dark:border-ink-700">
-            <button type="button" @click="closeModal" class="w-1/2 bg-ink-100 dark:bg-ink-700 hover:bg-ink-200 text-ink-700 dark:text-ink-300 py-2.5 rounded-xl text-sm font-data font-bold transition">
+            <button type="button" @click="closeModal" class="w-1/2 bg-ink-100 dark:bg-ink-700 hover:bg-ink-200 text-ink-700 dark:text-ink-300 py-2.5 rounded-xl text-xs font-bold transition">
               Batal
             </button>
             <button type="button" @click="confirmImport" :disabled="validGroups.length === 0 || isImporting"
-              class="w-1/2 bg-hazard-500 hover:bg-hazard-600 disabled:opacity-40 disabled:cursor-not-allowed text-ink-900 py-2.5 rounded-xl text-sm font-data font-bold transition shadow-sm">
-              {{ isImporting ? 'Mengimpor...' : 'Import ' + validGroups.length + ' PO' }}
+              class="w-1/2 bg-hazard-600 hover:bg-hazard-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-2">
+              <svg v-if="isImporting" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>{{ isImporting ? 'Mengimpor Data...' : 'Import ' + validGroups.length + ' PO Sekarang' }}</span>
             </button>
           </div>
         </div>
 
         <!-- STEP 2: Hasil import -->
-        <div v-else class="space-y-4 mt-4">
-          <div class="p-4 bg-stamp-50 dark:bg-stamp-700/20 border border-stamp-200 dark:border-stamp-700 rounded-xl text-sm font-data font-semibold text-stamp-700 dark:text-stamp-300">
-            {{ importResult.message }}
+        <div v-else class="space-y-4">
+          <div class="p-4 bg-stamp-50 dark:bg-stamp-900/30 border border-stamp-200 dark:border-stamp-700 rounded-xl text-xs font-semibold text-stamp-700 dark:text-stamp-300 flex items-center gap-2">
+            <span class="text-base">🎉</span>
+            <span>{{ importResult.message }}</span>
           </div>
 
           <div v-if="importResult.skipped && importResult.skipped.length > 0" class="space-y-2">
-            <p class="text-xs font-data font-bold text-ink-500 dark:text-ink-300 uppercase">Detail yang dilewati:</p>
+            <p class="text-xs font-bold text-ink-600 dark:text-ink-300 uppercase tracking-wider">Detail Baris yang Dilewati:</p>
             <div class="max-h-64 overflow-y-auto border border-ink-200 dark:border-ink-600 rounded-xl">
-              <table class="w-full text-xs font-data">
-                <thead class="bg-paper-100 dark:bg-ink-700 sticky top-0">
-                  <tr class="text-left text-ink-500 dark:text-ink-300 uppercase text-[10px]">
+              <table class="w-full text-xs">
+                <thead class="bg-ink-100/70 dark:bg-ink-700 sticky top-0">
+                  <tr class="text-left text-ink-600 dark:text-ink-300 uppercase text-[10px]">
                     <th class="px-3 py-2">Baris</th>
                     <th class="px-3 py-2">PO Number</th>
                     <th class="px-3 py-2">Alasan</th>
@@ -367,9 +437,9 @@ export default {
                 </thead>
                 <tbody>
                   <tr v-for="s in importResult.skipped" :key="s.row" class="border-t border-ink-100 dark:border-ink-700">
-                    <td class="px-3 py-2 text-ink-400">{{ s.row }}</td>
-                    <td class="px-3 py-2 font-semibold">{{ s.po_number }}</td>
-                    <td class="px-3 py-2 text-alarm-600 dark:text-alarm-400">{{ s.reason }}</td>
+                    <td class="px-3 py-2 text-ink-400 font-mono">{{ s.row }}</td>
+                    <td class="px-3 py-2 font-mono font-bold">{{ s.po_number }}</td>
+                    <td class="px-3 py-2 text-alarm-600 dark:text-alarm-400 font-semibold">{{ s.reason }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -377,11 +447,11 @@ export default {
           </div>
 
           <div class="flex space-x-3 pt-3 border-t border-ink-100 dark:border-ink-700">
-            <button type="button" @click="resetState" class="w-1/2 bg-ink-100 dark:bg-ink-700 hover:bg-ink-200 text-ink-700 dark:text-ink-300 py-2.5 rounded-xl text-sm font-data font-bold transition">
+            <button type="button" @click="resetState" class="w-1/2 bg-ink-100 dark:bg-ink-700 hover:bg-ink-200 text-ink-700 dark:text-ink-300 py-2.5 rounded-xl text-xs font-bold transition">
               Upload File Lain
             </button>
-            <button type="button" @click="closeModal" class="w-1/2 bg-hazard-500 hover:bg-hazard-600 text-ink-900 py-2.5 rounded-xl text-sm font-data font-bold transition shadow-sm">
-              Selesai
+            <button type="button" @click="closeModal" class="w-1/2 bg-hazard-600 hover:bg-hazard-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
+              Selesai &amp; Tutup
             </button>
           </div>
         </div>
