@@ -61,7 +61,7 @@ const app = createApp({
       localStorage.removeItem("gcwh_token");
       localStorage.removeItem("gcwh_user");
       currentUser.value = null;
-      showLoginModal.value = true;
+      window.location.href = "/login.html";
     };
 
     const onLoginSuccess = (user) => {
