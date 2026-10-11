@@ -1,4 +1,4 @@
-const { createApp, ref, computed, onMounted, watch } = Vue;
+const { createApp, ref, computed, onMounted } = Vue;
 
 import { DEFAULT_BUYERS } from "./constants.js";
 import { isUrgentPO } from "./utils.js";
@@ -26,6 +26,9 @@ import PoDetailDrawer from "./components/modals/PoDetailDrawer.js";
 import CartonInModal from "./components/modals/CartonInModal.js";
 import CartonOutModal from "./components/modals/CartonOutModal.js";
 
+// --- KOMPONEN BULK UPLOAD PO ---
+import BulkUploadModal from "./components/modals/BulkUploadModal.js";
+
 const app = createApp({
   components: {
     HeaderBar,
@@ -47,6 +50,8 @@ const app = createApp({
     PoDetailDrawer,
     CartonInModal,
     CartonOutModal,
+    // --- REGISTER BULK UPLOAD PO ---
+    BulkUploadModal,
   },
   setup() {
     // State Sesi & Autentikasi
@@ -56,12 +61,13 @@ const app = createApp({
     const showLoginModal = ref(!currentUser.value);
     const showUserModal = ref(false);
     const showAuditTrailModal = ref(false);
+    const showBulkUploadModal = ref(false);
 
     const logout = () => {
       localStorage.removeItem("gcwh_token");
       localStorage.removeItem("gcwh_user");
       currentUser.value = null;
-      window.location.href = "/login.html";
+      showLoginModal.value = true;
     };
 
     const onLoginSuccess = (user) => {
@@ -70,11 +76,9 @@ const app = createApp({
       fetchData();
     };
 
-    // State Aplikasi Utama & Tab Logic V6
+    // State Aplikasi Utama
     const isDarkMode = ref(localStorage.getItem("theme") === "dark");
-    const activeTab = ref("admin"); // 'admin' | 'helper'
-    const adminSubTab = ref("active"); // 'active' | 'overdue' | 'shipped' | 'archive' (sesuai index.html)
-
+    const activeTab = ref("helper");
     const isLoading = ref(true);
     const items = ref([]);
     const buyers = ref([...DEFAULT_BUYERS]);
@@ -88,11 +92,10 @@ const app = createApp({
     const searchQuery = ref("");
     const selectedBuyerFilter = ref("");
     const selectedStatusFilter = ref("");
-    const selectedDateFilter = ref(""); // State Filter Tanggal Shipment Baru
     const filterUrgentOnly = ref(false);
     const message = ref("");
 
-    // State Modals
+    // State Modals Lama
     const showPlacementModal = ref(false);
     const showEditModal = ref(false);
     const showInspectionModal = ref(false);
@@ -102,24 +105,24 @@ const app = createApp({
     const showPoDrawer = ref(false);
     const showCartonInModal = ref(false);
     const showCartonOutModal = ref(false);
-    const selectedPO = ref(null);
+    const selectedPO = ref(null); // Menyimpan data PO yang sedang diklik untuk Drawer
 
     const activePO = ref({});
     const activeColor = ref({});
 
-    // --- FUNGSI TRIGGER DRAWER & MODAL V6 ---
+    // --- FUNGSI TRIGGER DRAWER V6 ---
     const openPoDrawer = (po) => {
       selectedPO.value = po;
       showPoDrawer.value = true;
     };
 
     const openCartonInModal = (po) => {
-      selectedPO.value = po || selectedPO.value;
+      selectedPO.value = po;
       showCartonInModal.value = true;
     };
 
     const openCartonOutModal = (po) => {
-      selectedPO.value = po || selectedPO.value;
+      selectedPO.value = po;
       showCartonOutModal.value = true;
     };
 
@@ -188,6 +191,7 @@ const app = createApp({
         const resData = await api.getPOs();
         if (resData.ok) {
           items.value = await resData.json();
+          // Jika Drawer sedang terbuka, perbarui data selectedPO secara reaktif
           if (showPoDrawer.value && selectedPO.value) {
             const updatedPO = items.value.find(
               (p) => p.id === selectedPO.value.id,
@@ -234,7 +238,6 @@ const app = createApp({
       searchQuery.value = "";
       selectedBuyerFilter.value = "";
       selectedStatusFilter.value = "";
-      selectedDateFilter.value = ""; // Reset filter tanggal
       filterUrgentOnly.value = false;
     };
 
@@ -455,6 +458,7 @@ const app = createApp({
       placementForm.value = {
         color_id: color.id,
         rack_location: color.rack_location || "",
+        // carton_qty & helper_name tidak perlu dikirim lagi dari form ini
         carton_qty: color.carton_qty || 0,
         helper_name:
           color.helper_name || currentUser.value?.username || "Helper",
@@ -539,106 +543,18 @@ const app = createApp({
       window.print();
     };
 
-    // --- LOGIKA PENGELOMPOKAN SUB-TAB ADMIN V6 ---
-    const todayStr = computed(() => new Date().toISOString().split("T")[0]);
-
-    // Helper untuk mengecek apakah PO sudah Shipped
-    const isShippedPO = (po) => {
-      if (!po.status) return false;
-      const statusLower = po.status.toLowerCase();
-      return statusLower.includes("shipped");
-    };
-
-    // Helper kecil untuk mendapatkan tanggal acuan shipment (Revisi / Ex-Fty)
-    const getEffectiveShipmentDate = (po) => {
-      const d = po.revised_ex_fty_date || po.ex_fty_date;
-      return d ? d.split("T")[0] : null;
-    };
-
-    // 1. ACTIVE
-    const activePOsList = computed(() => {
-      return items.value.filter((po) => {
-        if (isShippedPO(po) || po.status === "Archived") return false;
-        const shipDate = getEffectiveShipmentDate(po);
-        if (!shipDate) return true;
-        return shipDate >= todayStr.value;
-      });
-    });
-
-    // 2. OVERDUE
-    const overduePOsList = computed(() => {
-      return items.value.filter((po) => {
-        if (isShippedPO(po) || po.status === "Archived") return false;
-        const shipDate = getEffectiveShipmentDate(po);
-        if (!shipDate) return false;
-        return shipDate < todayStr.value;
-      });
-    });
-
-    // 3. SHIPPED
-    const shippedPOsList = computed(() => {
-      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-      const now = new Date().getTime();
-
-      return items.value.filter((po) => {
-        if (!isShippedPO(po)) return false;
-        if (!po.updated_at) return true;
-        const updatedAt = new Date(po.updated_at).getTime();
-        return now - updatedAt <= SEVEN_DAYS_MS;
-      });
-    });
-
-    // 4. ARCHIVE
-    const archivedPOsList = computed(() => {
-      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-      const now = new Date().getTime();
-
-      return items.value.filter((po) => {
-        if (po.status === "Archived") return true;
-        if (isShippedPO(po)) {
-          if (!po.updated_at) return false;
-          const updatedAt = new Date(po.updated_at).getTime();
-          return now - updatedAt > SEVEN_DAYS_MS;
-        }
-        return false;
-      });
-    });
-
-    // Badge counts untuk index.html
-    const activePOsCount = computed(() => activePOsList.value.length);
-    const overduePOsCount = computed(() => overduePOsList.value.length);
-    const shippedPOsCount = computed(() => shippedPOsList.value.length);
-    const archivedPOsCount = computed(() => archivedPOsList.value.length);
-
     const criticalPOs = computed(() =>
       items.value.filter((po) => isUrgentPO(po)),
     );
 
-    // Filter PO berdasarkan Tab/Sub-Tab & Filter Interaktif (Search, Buyer, Status, Date)
+    // Dipakai BulkUploadModal buat nandain di preview kalau PO Number
+    // yang mau diimport ternyata udah ada di database.
+    const existingPoNumbers = computed(() =>
+      items.value.map((po) => po.po_number),
+    );
+
     const filteredPOs = computed(() => {
-      let sourceList = items.value;
-
-      if (activeTab.value === "admin") {
-        switch (adminSubTab.value) {
-          case "overdue":
-            sourceList = overduePOsList.value;
-            break;
-          case "shipped":
-            sourceList = shippedPOsList.value;
-            break;
-          case "archive":
-            sourceList = archivedPOsList.value;
-            break;
-          case "active":
-          default:
-            sourceList = activePOsList.value;
-            break;
-        }
-      } else if (activeTab.value === "helper") {
-        sourceList = [...activePOsList.value, ...overduePOsList.value];
-      }
-
-      return sourceList.filter((po) => {
+      return items.value.filter((po) => {
         if (filterUrgentOnly.value) {
           if (!isUrgentPO(po)) return false;
         }
@@ -654,15 +570,6 @@ const app = createApp({
         ) {
           return false;
         }
-
-        // --- FILTER TANGGAL SHIPMENT ---
-        if (selectedDateFilter.value) {
-          const effectiveDate = getEffectiveShipmentDate(po);
-          if (effectiveDate !== selectedDateFilter.value) {
-            return false;
-          }
-        }
-
         if (searchQuery.value) {
           const q = searchQuery.value.toLowerCase();
           const matchPO =
@@ -692,7 +599,6 @@ const app = createApp({
           searchQuery.value ||
           selectedBuyerFilter.value ||
           selectedStatusFilter.value ||
-          selectedDateFilter.value ||
           filterUrgentOnly.value
         ),
     );
@@ -703,7 +609,11 @@ const app = createApp({
       showUserModal,
       showAuditTrailModal,
 
-      // State V6
+      // -- RETURN STATE & FUNGSI BULK UPLOAD PO --
+      showBulkUploadModal,
+      existingPoNumbers,
+
+      // -- RETURN STATE & FUNGSI V6 --
       showPoDrawer,
       showCartonInModal,
       showCartonOutModal,
@@ -711,18 +621,12 @@ const app = createApp({
       openPoDrawer,
       openCartonInModal,
       openCartonOutModal,
-      fetchData,
+      fetchData, // Diekspos agar bisa di-call dari modal sukses
 
       logout,
       onLoginSuccess,
       isDarkMode,
       activeTab,
-      adminSubTab,
-      activePOsCount,
-      overduePOsCount,
-      shippedPOsCount,
-      archivedPOsCount,
-
       isLoading,
       items,
       buyers,
@@ -730,7 +634,6 @@ const app = createApp({
       searchQuery,
       selectedBuyerFilter,
       selectedStatusFilter,
-      selectedDateFilter, // Diekspos agar bisa di-bind di FilterToolbar
       filterUrgentOnly,
       message,
       showPlacementModal,

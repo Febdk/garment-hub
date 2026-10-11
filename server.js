@@ -9,7 +9,8 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
 const app = express();
-app.use(express.json());
+
+app.use(express.json({ limit: "5mb" }));
 
 app.use(
   helmet({
@@ -26,14 +27,7 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "https:"],
-        // CATATAN: connectSrc di bawah mengasumsikan frontend & backend
-        // satu origin (diservis bareng oleh Express app ini). Tapi api.js
-        // hardcode API_BASE_URL ke domain Railway terpisah — artinya kalau
-        // public/ ini di-deploy KE HOST LAIN (misal Netlify, sesuai
-        // public/_redirects & allowlist CORS di atas), header CSP dari
-        // Express ini TIDAK akan berlaku di sana. Kalau frontend memang
-        // dipisah dari backend, equivalent header CSP perlu diatur juga di
-        // sisi hosting frontend (misal lewat file `_headers` di Netlify).
+
         connectSrc: [
           "'self'",
           "https://garment-hub-production-c0a6.up.railway.app",
@@ -59,11 +53,6 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// FIX (hardening): sebelumnya rate limiter CUMA ada di /api/login. Semua
-// endpoint lain (termasuk create/update/delete) bisa di-spam tanpa batas —
-// rawan buat DoS sederhana atau abuse otomatis. Limiter umum ini dipasang
-// untuk semua /api/*, dengan threshold yang jauh lebih longgar dari login
-// (karena dipakai juga oleh traffic normal UI).
 const generalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -152,9 +141,6 @@ async function seedDefaultAccounts() {
       const adminHash = await bcrypt.hash(adminPass, 12);
       const helperHash = await bcrypt.hash(helperPass, 12);
 
-      // FIX: kolom `role` bertipe enum('admin','helper') — huruf kecil.
-      // Sebelumnya di-insert 'Admin'/'Helper' (kapital) yang tidak cocok
-      // dengan enum, menyebabkan gagal/ter-truncate di strict SQL mode.
       await db.query(
         `INSERT IGNORE INTO users (id, username, password, role, full_name) VALUES
          (1, 'admin', ?, 'admin', 'Administrator Utama'),
@@ -229,11 +215,6 @@ const recordLog = async (username, action, details) => {
   }
 };
 
-// FIX (hardening): sebelumnya SEMUA endpoint `catch` block ngirim
-// `err.message` mentah ke client — ini bisa bocorin detail internal
-// (nama tabel/kolom, struktur query, dsb) ke siapapun yang hit endpoint
-// dan memicu error. Sekarang: detail asli tetap di-log di server (buat
-// debugging), tapi client cuma dapet pesan generik dalam Bahasa Indonesia.
 const sendServerError = (res, err, context) => {
   console.error(`[${context}]`, err);
   res.status(500).json({
@@ -473,6 +454,151 @@ app.post(
       }
     } catch (err) {
       sendServerError(res, err, "POST /api/po");
+    }
+  },
+);
+
+app.post(
+  "/api/po/bulk",
+  authenticateToken,
+  authorizeRole("Admin", "admin"),
+  async (req, res) => {
+    try {
+      const { rows } = req.body;
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "Tidak ada data PO yang dikirim." });
+      }
+      if (rows.length > 500) {
+        return res
+          .status(400)
+          .json({
+            error:
+              "Maksimal 500 baris per upload. Pecah file jadi beberapa batch.",
+          });
+      }
+
+      const incomingNumbers = [
+        ...new Set(
+          rows.map((r) => clean(r.po_number)).filter((v) => v !== null),
+        ),
+      ];
+      let existingSet = new Set();
+      if (incomingNumbers.length > 0) {
+        const [existingRows] = await db.query(
+          `SELECT po_number FROM purchase_orders WHERE po_number IN (?)`,
+          [incomingNumbers],
+        );
+        existingSet = new Set(existingRows.map((r) => r.po_number));
+      }
+
+      const seenInBatch = new Set();
+      const success = [];
+      const skipped = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i] || {};
+        const rowNum = i + 2; // +2: baris 1 di file dianggap header
+        const buyer = clean(row.buyer);
+        const po_number = clean(row.po_number);
+        const style_code = clean(row.style_code);
+        const ex_fty_date = clean(row.ex_fty_date);
+
+        if (!buyer || !po_number || !style_code || !ex_fty_date) {
+          skipped.push({
+            row: rowNum,
+            po_number: po_number || "(kosong)",
+            reason:
+              "Field wajib ada yang kosong (buyer/po_number/style_code/ex_fty_date)",
+          });
+          continue;
+        }
+        if (existingSet.has(po_number)) {
+          skipped.push({
+            row: rowNum,
+            po_number,
+            reason: "PO Number sudah ada di database",
+          });
+          continue;
+        }
+        if (seenInBatch.has(po_number)) {
+          skipped.push({
+            row: rowNum,
+            po_number,
+            reason: "PO Number duplikat di dalam file yang sama",
+          });
+          continue;
+        }
+        seenInBatch.add(po_number);
+
+        try {
+          let logoUrl = clean(row.buyer_logo);
+          if (!logoUrl) {
+            const [buyerRow] = await db.query(
+              "SELECT logo_url FROM buyers WHERE buyer_name = ?",
+              [buyer],
+            );
+            logoUrl = buyerRow.length > 0 ? buyerRow[0].logo_url : null;
+          }
+
+          const [result] = await db.query(
+            `INSERT INTO purchase_orders (buyer, po_number, style_code, ex_fty_date, buyer_logo, status) VALUES (?, ?, ?, ?, ?, 'Pending')`,
+            [buyer, po_number, style_code, ex_fty_date, logoUrl],
+          );
+          const poId = result.insertId;
+
+          const colors = Array.isArray(row.colors)
+            ? row.colors.filter((c) => c && clean(c.color_code))
+            : [];
+          if (colors.length > 0) {
+            const colorValues = colors.map((c) => [
+              poId,
+              clean(c.color_code),
+              c.total_qty || 0,
+              c.carton_qty || 0,
+              c.rack_location || "",
+              c.helper_name || "",
+            ]);
+            await db.query(
+              `INSERT INTO po_colors (po_id, color_code, total_qty, carton_qty, rack_location, helper_name) VALUES ?`,
+              [colorValues],
+            );
+          }
+
+          success.push({ row: rowNum, po_number, id: poId });
+        } catch (rowErr) {
+          // Baris ini gagal (misal error DB) — di-skip, tapi baris lain
+          // tetap lanjut diproses (bukan rollback semua).
+          console.error(
+            `[POST /api/po/bulk] Gagal insert baris ${rowNum} (${po_number}):`,
+            rowErr,
+          );
+          skipped.push({
+            row: rowNum,
+            po_number,
+            reason: "Gagal disimpan ke database — cek log server",
+          });
+        }
+      }
+
+      if (success.length > 0) {
+        await recordLog(
+          req.user.username,
+          "BULK_CREATE_PO",
+          `Bulk import: ${success.length} PO berhasil, ${skipped.length} dilewati.`,
+        );
+      }
+
+      res.json({
+        message: `${success.length} PO berhasil diimpor, ${skipped.length} dilewati.`,
+        success_count: success.length,
+        skipped_count: skipped.length,
+        skipped,
+      });
+    } catch (err) {
+      sendServerError(res, err, "POST /api/po/bulk");
     }
   },
 );

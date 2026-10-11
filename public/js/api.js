@@ -47,6 +47,13 @@ export const createPO = (payload) =>
     body: JSON.stringify(payload),
   });
 
+export const bulkCreatePO = (rows) =>
+  authFetch("/api/po/bulk", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ rows }),
+  });
+
 export const updatePO = (id, payload) =>
   authFetch(`/api/po/${id}`, {
     method: "PUT",

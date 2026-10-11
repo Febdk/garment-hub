@@ -73,6 +73,9 @@
          lalu tambahkan atribut integrity="sha384-..." di tag script ini. -->
     <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
 
+    <!-- SheetJS (dipakai BulkUploadModal buat parsing & generate file Excel) -->
+    <script src="https://unpkg.com/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+
     <!-- Fonts + custom design tokens -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -297,6 +300,16 @@
               </div>
               <!-- =================================== -->
 
+              <div class="flex justify-end no-print">
+                <button
+                  type="button"
+                  @click="showBulkUploadModal = true"
+                  class="text-xs bg-white dark:bg-ink-800 border border-ink-300 dark:border-ink-600 text-ink-700 dark:text-ink-200 px-3 py-2 rounded-lg font-data font-bold hover:bg-ink-50 dark:hover:bg-ink-700 transition"
+                >
+                  ⬆ Upload Massal PO
+                </button>
+              </div>
+
               <div>
                 <!-- Tabel Master PO (INI YANG AKAN TAMPIL BERSIH SAAT DICETAK) -->
                 <po-table
@@ -388,6 +401,13 @@
         :show="showUserModal"
         @close="showUserModal = false"
       ></user-management-modal>
+
+      <bulk-upload-modal
+        :show="showBulkUploadModal"
+        :existing-po-numbers="existingPoNumbers"
+        @close="showBulkUploadModal = false"
+        @imported="fetchData"
+      ></bulk-upload-modal>
     </div>
 
     <style>
