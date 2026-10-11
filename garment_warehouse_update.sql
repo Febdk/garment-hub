@@ -121,6 +121,38 @@ INSERT INTO `buyers` (`id`, `buyer_name`, `logo_url`, `created_at`, `name`) VALU
 -- --------------------------------------------------------
 
 --
+-- Struktur dari tabel `carton_movements`
+-- (FIX: tabel ini dipakai oleh server.js /api/cartons/in, /api/cartons/out,
+--  dan /api/po/:id/movements tapi sebelumnya tidak ada di schema — bikin
+--  fitur tracking karton 500 error di instalasi baru.)
+--
+
+CREATE TABLE `carton_movements` (
+  `id` int(11) NOT NULL,
+  `po_id` int(11) NOT NULL,
+  `type` enum('IN','OUT') NOT NULL,
+  `quantity` int(11) NOT NULL,
+  `reason` varchar(100) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `recorded_by` int(11) DEFAULT NULL,
+  `recorded_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `carton_movements`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_po_id` (`po_id`),
+  ADD KEY `idx_recorded_by` (`recorded_by`);
+
+ALTER TABLE `carton_movements`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `carton_movements`
+  ADD CONSTRAINT `carton_movements_ibfk_1` FOREIGN KEY (`po_id`) REFERENCES `purchase_orders` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `carton_movements_ibfk_2` FOREIGN KEY (`recorded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+-- --------------------------------------------------------
+
+--
 -- Struktur dari tabel `po_colors`
 --
 
@@ -205,6 +237,16 @@ INSERT INTO `users` (`id`, `username`, `password`, `role`, `full_name`, `fullnam
 (2, 'helper', '$2b$12$cwVpAvi3dPewGVnlw8xJP.Jz9uBIZncxZ4wYxbA4XXw51V75fHEPy', 'helper', 'Helper Boy Warehouse', '', '2026-09-29 15:27:27');
 
 -- --------------------------------------------------------
+
+--
+-- FIX: kolom `fullname` NOT NULL tanpa default menyebabkan POST /api/users
+-- (CREATE_USER) gagal di SQL strict mode karena server.js hanya mengirim
+-- `full_name`, bukan `fullname`. Kolom ini sebenarnya redundant dengan
+-- `full_name` (yang dipakai di semua endpoint) — dibikin nullable supaya
+-- aman, tanpa perlu ubah logic di server.js.
+--
+ALTER TABLE `users`
+  MODIFY `fullname` varchar(100) DEFAULT NULL;
 
 --
 -- Struktur dari tabel `warehouse_placements`

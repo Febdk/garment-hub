@@ -11,10 +11,39 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 app.use(express.json());
 
-// ── Security Headers (#6) ───────────────────────────────────────────
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          "https://cdn.tailwindcss.com",
+          "https://unpkg.com",
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+        // CATATAN: connectSrc di bawah mengasumsikan frontend & backend
+        // satu origin (diservis bareng oleh Express app ini). Tapi api.js
+        // hardcode API_BASE_URL ke domain Railway terpisah — artinya kalau
+        // public/ ini di-deploy KE HOST LAIN (misal Netlify, sesuai
+        // public/_redirects & allowlist CORS di atas), header CSP dari
+        // Express ini TIDAK akan berlaku di sana. Kalau frontend memang
+        // dipisah dari backend, equivalent header CSP perlu diatur juga di
+        // sisi hosting frontend (misal lewat file `_headers` di Netlify).
+        connectSrc: [
+          "'self'",
+          "https://garment-hub-production-c0a6.up.railway.app",
+        ],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
   }),
 );
 
@@ -25,6 +54,21 @@ const loginLimiter = rateLimit({
   message: {
     error:
       "Terlalu banyak percobaan login dari IP ini. Silakan coba lagi setelah 15 menit.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// FIX (hardening): sebelumnya rate limiter CUMA ada di /api/login. Semua
+// endpoint lain (termasuk create/update/delete) bisa di-spam tanpa batas —
+// rawan buat DoS sederhana atau abuse otomatis. Limiter umum ini dipasang
+// untuk semua /api/*, dengan threshold yang jauh lebih longgar dari login
+// (karena dipakai juga oleh traffic normal UI).
+const generalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: {
+    error: "Terlalu banyak permintaan dari IP ini. Silakan coba lagi nanti.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -62,6 +106,8 @@ app.use(
 );
 
 app.use(express.static(path.join(__dirname, "public")));
+
+app.use("/api/", generalApiLimiter);
 
 // ── Database Connection Pool (#4) ───────────────────────────────────
 const pool = mysql.createPool({
@@ -106,10 +152,13 @@ async function seedDefaultAccounts() {
       const adminHash = await bcrypt.hash(adminPass, 12);
       const helperHash = await bcrypt.hash(helperPass, 12);
 
+      // FIX: kolom `role` bertipe enum('admin','helper') — huruf kecil.
+      // Sebelumnya di-insert 'Admin'/'Helper' (kapital) yang tidak cocok
+      // dengan enum, menyebabkan gagal/ter-truncate di strict SQL mode.
       await db.query(
-        `INSERT IGNORE INTO users (id, username, password, role, full_name, fullname) VALUES
-         (1, 'admin', ?, 'Admin', 'Administrator Utama', 'Admin'),
-         (2, 'helper', ?, 'Helper', 'Helper Boy Warehouse', 'Helper')`,
+        `INSERT IGNORE INTO users (id, username, password, role, full_name) VALUES
+         (1, 'admin', ?, 'admin', 'Administrator Utama'),
+         (2, 'helper', ?, 'helper', 'Helper Boy Warehouse')`,
         [adminHash, helperHash],
       );
       console.log("📌 Akun default berhasil dibuat.");
@@ -180,6 +229,18 @@ const recordLog = async (username, action, details) => {
   }
 };
 
+// FIX (hardening): sebelumnya SEMUA endpoint `catch` block ngirim
+// `err.message` mentah ke client — ini bisa bocorin detail internal
+// (nama tabel/kolom, struktur query, dsb) ke siapapun yang hit endpoint
+// dan memicu error. Sekarang: detail asli tetap di-log di server (buat
+// debugging), tapi client cuma dapet pesan generik dalam Bahasa Indonesia.
+const sendServerError = (res, err, context) => {
+  console.error(`[${context}]`, err);
+  res.status(500).json({
+    error: "Terjadi kesalahan pada server. Silakan coba lagi.",
+  });
+};
+
 // ══════════════════════════════════════════════════════════════════════
 // API ENDPOINTS
 // ══════════════════════════════════════════════════════════════════════
@@ -234,7 +295,7 @@ app.post("/api/login", loginLimiter, async (req, res) => {
       user: tokenPayload,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, "POST /api/login");
   }
 });
 
@@ -246,7 +307,7 @@ app.get("/api/buyers", async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, "GET /api/buyers");
   }
 });
 
@@ -283,7 +344,7 @@ app.put(
         buyer: { name: buyer_name, logo: logo_url },
       });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "PUT /api/buyers/logo");
     }
   },
 );
@@ -314,7 +375,7 @@ app.get("/api/data", authenticateToken, async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, "GET /api/data");
   }
 });
 
@@ -344,7 +405,7 @@ app.get("/api/stats", authenticateToken, async (req, res) => {
       total_actual_cartons: colorStats[0].total_actual_cartons || 0,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, "GET /api/stats");
   }
 });
 
@@ -411,7 +472,7 @@ app.post(
         res.json({ message: "PO Berhasil Disimpan tanpa warna!", id: poId });
       }
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "POST /api/po");
     }
   },
 );
@@ -496,7 +557,7 @@ app.put(
       res.json({ message: "Data PO Berhasil Diperbarui!" });
     } catch (err) {
       await conn.rollback();
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "PUT /api/po/:id");
     } finally {
       conn.release();
     }
@@ -555,7 +616,7 @@ app.put("/api/po/:id/status", authenticateToken, async (req, res) => {
       message: "Status Milestone & Detail Inspeksi Berhasil Diupdate!",
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, "PUT /api/po/:id/status");
   }
 });
 
@@ -575,7 +636,7 @@ app.post("/api/color-placement", authenticateToken, async (req, res) => {
     );
     res.json({ message: "Posisi Rak Warna Berhasil Diupdate!" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, "POST /api/color-placement");
   }
 });
 
@@ -596,7 +657,7 @@ app.delete(
       );
       res.json({ message: "PO Berhasil Dihapus!" });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "DELETE /api/po/:id");
     }
   },
 );
@@ -613,7 +674,7 @@ app.get(
       );
       res.json(logs);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "GET /api/logs");
     }
   },
 );
@@ -630,7 +691,7 @@ app.get(
       );
       res.json(users);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "GET /api/users");
     }
   },
 );
@@ -662,7 +723,7 @@ app.post(
       );
       res.json({ message: "Akun User Berhasil Dibuat!", id: result.insertId });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "POST /api/users");
     }
   },
 );
@@ -696,7 +757,7 @@ app.put(
       );
       res.json({ message: "Data akun berhasil diperbarui!" });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "PUT /api/users/:id");
     }
   },
 );
@@ -715,7 +776,7 @@ app.delete(
       );
       res.json({ message: "Akun berhasil dihapus!" });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err, "DELETE /api/users/:id");
     }
   },
 );

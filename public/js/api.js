@@ -112,7 +112,7 @@ export const verifyToken = () =>
   authFetch("/api/verify-token", { headers: getAuthHeaders() });
 
 export const getLogs = () =>
-  authFetch("/api/audit-logs", { headers: getAuthHeaders() });
+  authFetch("/api/logs", { headers: getAuthHeaders() });
 
 // =========================================================================
 // API TRACKING KARTON (GARMENT HUB V6)

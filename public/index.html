@@ -65,7 +65,13 @@
     </script>
 
     <!-- Vue 3 -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- FIX (hardening): sebelumnya "vue@3" floating ke versi terbaru tanpa
+         kontrol — tiap kali CDN cache refresh, bisa dapet versi Vue beda
+         tanpa testing. Sekarang di-pin ke versi spesifik. Idealnya juga
+         ditambah integrity (SRI) hash sebelum deploy:
+         `openssl dgst -sha384 -binary vue.global.prod.js | openssl base64 -A`
+         lalu tambahkan atribut integrity="sha384-..." di tag script ini. -->
+    <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
 
     <!-- Fonts + custom design tokens -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
