@@ -1,7 +1,4 @@
-// Semua fungsi di sini murni (pure) — logikanya identik dengan file asli,
-// cuma dipindah supaya bisa dipakai bareng-bareng oleh beberapa komponen.
 
-// Tampilkan HANYA waktu yang tersimpan (bukan "baru saja")
 export const formatDateTime = (dtStr) => {
   if (!dtStr) return "-";
   const d = new Date(dtStr);

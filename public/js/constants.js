@@ -1,5 +1,3 @@
-// Master buyer bawaan — dipakai sebagai fallback sebelum /api/buyers berhasil di-fetch.
-// Sama persis dengan DEFAULT_BUYERS di file asli, tidak ada yang diubah.
 export const DEFAULT_BUYERS = [
   {
     name: "Polo Ralph Lauren",
@@ -44,6 +42,10 @@ export const DEFAULT_BUYERS = [
   {
     name: "Tomy Bahama",
     logo: "https://eformku.id//uploads/logo-bren/1790426413_idxtRYatD0_1790426009517.webp",
+  },
+  {
+    name: "OterKnown",
+    logo: "https://eformku.id//uploads/logo-bren/1791878198_idP-6yfPhs_logos.webp",
   },
 ];
 
