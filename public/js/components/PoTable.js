@@ -39,6 +39,7 @@ export default {
     const pageSize = ref(saved);
     const page = ref(1);
 
+    const sizeOptions = [5, 10, 25, 50, 0]; // 0 = semua
     const sizeValue = computed(() =>
       pageSize.value ? String(pageSize.value) : "all",
     );
@@ -77,7 +78,8 @@ export default {
     };
     const onSizeChange = (e) => {
       const v = e.target.value;
-      pageSize.value = v === "all" ? 0 : Number(v);
+      const newSize = v === "all" ? 0 : Number(v);
+      pageSize.value = newSize;
       page.value = 1;
       try {
         localStorage.setItem(PAGE_KEY, v);
@@ -247,10 +249,11 @@ export default {
           <label class="flex items-center gap-2 font-semibold text-ink-500">
             Tampilkan
             <select :value="sizeValue" @change="onSizeChange" class="px-2 py-1.5 border border-ink-200 rounded-xl bg-paper-50 font-bold">
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="all">Semua</option>
+              <option value="5" :selected="pageSize === 5">5</option>
+              <option value="10" :selected="pageSize === 10">10</option>
+              <option value="25" :selected="pageSize === 25">25</option>
+              <option value="50" :selected="pageSize === 50">50</option>
+              <option value="all" :selected="pageSize === 0">Semua</option>
             </select>
           </label>
           <span class="text-ink-400 font-semibold">{{ rangeStart }}&ndash;{{ rangeEnd }} dari {{ pos.length }} PO</span>
