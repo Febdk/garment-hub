@@ -9,6 +9,7 @@ export default {
   name: "PoTable",
   props: {
     pos: { type: Array, required: true },
+    activeSubTab: { type: String, default: "active" },
   },
   emits: [
     "edit",

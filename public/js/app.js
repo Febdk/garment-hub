@@ -543,7 +543,294 @@ const app = createApp({
     };
 
     const printReport = () => {
-      window.print();
+      const pos = filteredPOs.value;
+      if (!pos || pos.length === 0) {
+        alert("Tidak ada data PO untuk dicetak!");
+        return;
+      }
+
+      // Label sub-tab untuk judul laporan
+      const subTabLabels = {
+        active: "Laporan PO Aktif",
+        overdue: "Laporan PO Overdue",
+        shipped: "Laporan PO Shipped",
+        archive: "Laporan PO Arsip",
+      };
+      const reportTitle =
+        subTabLabels[adminSubTab.value] || "Laporan Purchase Order";
+      const now = new Date();
+      const printDate = now.toLocaleDateString("id-ID", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const printTime = now.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Hitung summary stats
+      const totalPO = pos.length;
+      const totalKartonTarget = pos.reduce(
+        (s, po) =>
+          s + (po.colors || []).reduce((cs, c) => cs + (c.total_qty || 0), 0),
+        0,
+      );
+      const totalKartonFisik = pos.reduce(
+        (s, po) =>
+          s + (po.colors || []).reduce((cs, c) => cs + (c.carton_qty || 0), 0),
+        0,
+      );
+      const statusCount = {};
+      pos.forEach((po) => {
+        statusCount[po.status] = (statusCount[po.status] || 0) + 1;
+      });
+
+      const statusBadgeColor = (s) => {
+        const m = {
+          Pending: "#64748b",
+          "Inspection Internal": "#6366f1",
+          "Inspection External": "#8b5cf6",
+          "Ready to Ship": "#0ea5e9",
+          Shipped: "#10b981",
+          Archived: "#94a3b8",
+        };
+        return m[s] || "#64748b";
+      };
+
+      // Build rows HTML
+      let rows = "";
+      pos.forEach((po, idx) => {
+        const exFty = po.ex_fty_date ? po.ex_fty_date.split("T")[0] : "-";
+        const revised = po.revised_ex_fty_date
+          ? po.revised_ex_fty_date.split("T")[0]
+          : null;
+        const shipDate = revised || exFty;
+        const colors = po.colors || [];
+        const rowspan = Math.max(colors.length, 1);
+        const statusColor = statusBadgeColor(po.status);
+        const isOverdue =
+          shipDate < now.toISOString().split("T")[0] &&
+          !["Shipped", "Archived"].includes(po.status);
+
+        const rowBg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+
+        if (colors.length === 0) {
+          rows += `
+            <tr style="background:${rowBg}">
+              <td style="text-align:center;color:#94a3b8">${idx + 1}</td>
+              <td><span style="font-size:9px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">${po.buyer || "-"}</span></td>
+              <td style="font-weight:700;font-family:monospace;font-size:11px">${po.po_number || "-"}</td>
+              <td style="font-family:monospace;font-size:10px;color:#64748b">${po.style_code || "-"}</td>
+              <td style="font-family:monospace;text-align:center;${isOverdue ? "color:#ef4444;font-weight:700" : ""}">
+                ${revised ? `<span style="text-decoration:line-through;color:#94a3b8;font-size:9px">${exFty}</span><br><span style="color:#ef4444">${revised} ⚠</span>` : shipDate}
+              </td>
+              <td style="text-align:center;color:#94a3b8">-</td>
+              <td style="text-align:center;color:#94a3b8">-</td>
+              <td style="text-align:center;color:#94a3b8">-</td>
+              <td style="text-align:center">
+                <span style="background:${statusColor};color:#fff;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:0.5px">${po.status || "-"}</span>
+              </td>
+            </tr>`;
+        } else {
+          colors.forEach((c, ci) => {
+            const isFirst = ci === 0;
+            rows += `
+              <tr style="background:${rowBg}">
+                ${isFirst ? `<td rowspan="${rowspan}" style="text-align:center;color:#94a3b8;vertical-align:middle">${idx + 1}</td>` : ""}
+                ${isFirst ? `<td rowspan="${rowspan}" style="vertical-align:middle"><span style="font-size:9px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">${po.buyer || "-"}</span></td>` : ""}
+                ${isFirst ? `<td rowspan="${rowspan}" style="font-weight:700;font-family:monospace;font-size:11px;vertical-align:middle">${po.po_number || "-"}</td>` : ""}
+                ${isFirst ? `<td rowspan="${rowspan}" style="font-family:monospace;font-size:10px;color:#64748b;vertical-align:middle">${po.style_code || "-"}</td>` : ""}
+                ${
+                  isFirst
+                    ? `<td rowspan="${rowspan}" style="font-family:monospace;text-align:center;vertical-align:middle;${isOverdue ? "color:#ef4444;font-weight:700" : ""}">
+                  ${revised ? `<span style="text-decoration:line-through;color:#94a3b8;font-size:9px">${exFty}</span><br><span style="color:#ef4444">${revised} ⚠</span>` : shipDate}
+                </td>`
+                    : ""
+                }
+                <td style="font-family:monospace;font-size:10px;font-weight:600;text-align:center">${c.color_code || "-"}</td>
+                <td style="text-align:center;font-weight:700;font-family:monospace">${(c.total_qty || 0).toLocaleString("id-ID")}</td>
+                <td style="text-align:center;font-family:monospace;color:${c.rack_location && c.rack_location !== "-" && c.rack_location !== "BELUM SET" ? "#0f172a" : "#ef4444"};font-weight:600">
+                  ${c.rack_location && c.rack_location !== "-" && c.rack_location !== "BELUM SET" ? c.rack_location : "BELUM SET"}
+                </td>
+                ${
+                  isFirst
+                    ? `<td rowspan="${rowspan}" style="text-align:center;vertical-align:middle">
+                  <span style="background:${statusColor};color:#fff;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:0.5px">${po.status || "-"}</span>
+                </td>`
+                    : ""
+                }
+              </tr>`;
+          });
+        }
+      });
+
+      // Summary stat cards
+      const statCards = Object.entries(statusCount)
+        .map(
+          ([s, n]) =>
+            `<div style="display:inline-block;margin:0 8px 6px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 14px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:${statusBadgeColor(s)}">${n}</div>
+          <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${s}</div>
+        </div>`,
+        )
+        .join("");
+
+      const html = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>${reportTitle} — GCWH</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm 14mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #0f172a; background: #fff; }
+
+    /* ── KOP SURAT ── */
+    .kop { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 14px; }
+    .kop-left { display: flex; align-items: center; gap: 14px; }
+    .kop-logo { width: 44px; height: 44px; background: #1e3a5f; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 900; letter-spacing: -1px; flex-shrink: 0; }
+    .kop-company { }
+    .kop-company-name { font-size: 16px; font-weight: 800; color: #1e3a5f; letter-spacing: -0.5px; }
+    .kop-company-sub  { font-size: 9px; color: #64748b; margin-top: 1px; }
+    .kop-right { text-align: right; }
+    .kop-report-title { font-size: 13px; font-weight: 800; color: #1e3a5f; }
+    .kop-report-meta  { font-size: 9px; color: #64748b; margin-top: 3px; line-height: 1.6; }
+
+    /* ── SUMMARY ── */
+    .summary { background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; }
+    .summary-title { font-size: 10px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .summary-grid { display: flex; gap: 0; flex-wrap: wrap; }
+    .summary-item { margin-right: 24px; margin-bottom: 4px; }
+    .summary-item .val { font-size: 20px; font-weight: 900; color: #1e3a5f; line-height: 1; }
+    .summary-item .lbl { font-size: 9px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .summary-divider { width: 1px; background: #bfdbfe; margin: 0 20px 0 4px; }
+
+    /* ── TABLE ── */
+    table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    thead tr { background: #1e3a5f; color: #fff; }
+    thead th { padding: 7px 8px; text-align: left; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+    thead th.center { text-align: center; }
+    tbody tr { border-bottom: 1px solid #e2e8f0; }
+    tbody tr:last-child { border-bottom: 2px solid #1e3a5f; }
+    tbody td { padding: 5px 8px; vertical-align: middle; }
+    tfoot tr { background: #f1f5f9; }
+    tfoot td { padding: 6px 8px; font-weight: 700; font-size: 10px; border-top: 2px solid #1e3a5f; }
+
+    /* ── FOOTER ── */
+    .report-footer { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .footer-note { font-size: 8px; color: #94a3b8; }
+    .signature-area { display: flex; gap: 40px; }
+    .signature-box { text-align: center; }
+    .signature-box .sig-line { width: 120px; border-top: 1px solid #334155; margin: 28px auto 4px; }
+    .signature-box .sig-label { font-size: 9px; color: #334155; font-weight: 600; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KOP SURAT -->
+  <div class="kop">
+    <div class="kop-left">
+      <div class="kop-logo">GC</div>
+      <div class="kop-company">
+        <div class="kop-company-name">GCWH — Garment Carton &amp; Warehouse Hub</div>
+        <div class="kop-company-sub">Sistem Monitoring Purchase Order, Inspeksi &amp; Shipment</div>
+        <div class="kop-company-sub">garment-hub.eformku.id</div>
+      </div>
+    </div>
+    <div class="kop-right">
+      <div class="kop-report-title">${reportTitle}</div>
+      <div class="kop-report-meta">
+        Tanggal Cetak: ${printDate}<br>
+        Jam: ${printTime} WIB<br>
+        Total Record: <strong>${totalPO} PO</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY STATS -->
+  <div class="summary">
+    <div class="summary-title">Ringkasan Data</div>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="val">${totalPO}</div>
+        <div class="lbl">Total PO</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <div class="val">${totalKartonTarget.toLocaleString("id-ID")}</div>
+        <div class="lbl">Target Karton</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <div class="val">${totalKartonFisik.toLocaleString("id-ID")}</div>
+        <div class="lbl">Fisik Karton</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div style="flex:1">${statCards}</div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th style="width:28px" class="center">No</th>
+        <th style="width:110px">Buyer</th>
+        <th style="width:110px">No. PO</th>
+        <th style="width:90px">Style Code</th>
+        <th style="width:90px" class="center">Ex-Fty / Shipment</th>
+        <th style="width:70px" class="center">Kode Warna</th>
+        <th style="width:70px" class="center">Target Ktn</th>
+        <th style="width:80px" class="center">Lokasi Rak</th>
+        <th style="width:100px" class="center">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6" style="text-align:right;color:#475569">TOTAL KARTON:</td>
+        <td style="text-align:center;color:#1e3a5f;font-size:12px">${totalKartonTarget.toLocaleString("id-ID")}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="report-footer">
+    <div class="footer-note">
+      Dokumen ini digenerate otomatis oleh sistem GCWH pada ${printDate} pukul ${printTime} WIB.<br>
+      Data bersumber dari database warehouse real-time. Harap verifikasi ulang sebelum digunakan sebagai dokumen resmi.
+    </div>
+    <div class="signature-area">
+      <div class="signature-box">
+        <div class="sig-line"></div>
+        <div class="sig-label">Warehouse Admin</div>
+      </div>
+      <div class="signature-box">
+        <div class="sig-line"></div>
+        <div class="sig-label">Warehouse Manager</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() { window.print(); }
+  <\/script>
+</body>
+</html>`;
+
+      const win = window.open("", "_blank");
+      win.document.write(html);
+      win.document.close();
     };
 
     // --- LOGIKA PENGELOMPOKAN SUB-TAB ADMIN V6 ---
