@@ -1119,9 +1119,9 @@ const app = createApp({
     <div class="kop-brand">
       <div class="kop-logo">GC</div>
       <div class="kop-company">
-        <h1>PT. GARMENT HUB INDONESIA</h1>
+        <h1>PT. UNGARAN SARI GARMENT</h1>
         <h2>Warehouse, Finishing &amp; Multi-Buyer Logistics Hub</h2>
-        <p>Kawasan Industri Manufaktur Tekstil Terpadu | Dokumen Internal Resmi Pergudangan</p>
+        <p>Kawasan Industri Manufaktur Garment | Dokumen Internal Resmi Pergudangan</p>
       </div>
     </div>
     <div class="kop-control">
@@ -1242,7 +1242,7 @@ const app = createApp({
         <div class="sig-date">Tgl: .................................</div>
         <div class="sig-line"></div>
         <div class="sig-name">( ..................................... )</div>
-        <div style="font-size:7.5px;color:#64748b">Supervisor QC &amp; Gudang</div>
+        <div style="font-size:7.5px;color:#64748b">Supervisor  &amp; Finishing</div>
       </div>
 
       <div class="sig-card">
@@ -1250,7 +1250,7 @@ const app = createApp({
         <div class="sig-date">Tgl: .................................</div>
         <div class="sig-line"></div>
         <div class="sig-name">( ..................................... )</div>
-        <div style="font-size:7.5px;color:#64748b">Factory / Warehouse Head</div>
+        <div style="font-size:7.5px;color:#64748b">Factory / Departeman Head</div>
       </div>
     </div>
   </div>
