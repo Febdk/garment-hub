@@ -2,6 +2,11 @@
    GCWH - MODERN & MOBILE-FIRST DESIGN TOKENS & STYLES
    ========================================================== */
 
+/* Anti-FOUC: Sembunyikan elemen Vue sebelum selesai dimount */
+[v-cloak] {
+  display: none !important;
+}
+
 /* Custom scrollbar - Modern and smooth */
 ::-webkit-scrollbar {
   width: 8px;

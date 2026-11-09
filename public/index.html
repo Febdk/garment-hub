@@ -84,7 +84,20 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap"
     />
     <meta name="theme-color" content="#0b0d11" />
-    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="./css/theme.css" />
+    <style>
+      /* Sembunyikan template mentah saat pertama kali dimuat (Cegah FOUC) */
+      [v-cloak] {
+        display: none !important;
+      }
+      #initial-loader {
+        display: flex;
+      }
+      #app:not([v-cloak]) + #initial-loader,
+      #app:not([v-cloak]) ~ #initial-loader {
+        display: none !important;
+      }
+    </style>
   </head>
   <body
     class="bg-paper-50 dark:bg-ink-900 text-ink-800 dark:text-ink-100 antialiased min-h-screen transition-colors duration-300"
@@ -416,6 +429,23 @@
       ></bulk-upload-modal>
     </div>
 
+    <!-- Preloader Elegan (Tampil halus saat reload sebelum Vue selesai mount) -->
+    <div id="initial-loader" class="fixed inset-0 bg-paper-50 dark:bg-ink-900 flex flex-col items-center justify-center z-50 transition-opacity">
+      <div class="w-12 h-12 rounded-2xl bg-hazard-500 text-ink-900 flex items-center justify-center font-bold text-lg shadow-md mb-3 font-display">
+        GC
+      </div>
+      <div class="text-sm font-bold text-ink-900 dark:text-white font-display">
+        GCWH Garment Hub
+      </div>
+      <div class="text-xs text-ink-400 font-mono mt-1.5 flex items-center gap-2">
+        <svg class="animate-spin w-3.5 h-3.5 text-hazard-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Memuat sistem gudang...</span>
+      </div>
+    </div>
+
     <style>
       /* Hide scrollbar for Chrome, Safari and Opera */
       .scrollbar-hide::-webkit-scrollbar {
@@ -428,7 +458,7 @@
       }
     </style>
 
-    <script type="module" src="/js/app.js"></script>
+    <script type="module" src="./js/app.js"></script>
     <script>
       (function () {
         var raf = 0;
