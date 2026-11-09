@@ -685,6 +685,13 @@ const app = createApp({
         minute: "2-digit",
       });
 
+      // ── Generate Nomor Formulir / Kode Unik Setiap Pencetakan ──
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const randToken = Math.floor(1000 + Math.random() * 9000);
+      const noFormulir = `FRM-WHS-PO-${yyyy}${mm}${dd}-${randToken}`;
+
       const printedBy = currentUser.value
         ? `${currentUser.value.full_name || currentUser.value.username} (${(currentUser.value.role || "Admin").toUpperCase()})`
         : "Administrator Gudang";
@@ -846,7 +853,7 @@ const app = createApp({
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>${reportTitle} — PT. GARMENT HUB INDONESIA</title>
+  <title>${reportTitle} [${noFormulir}] — PT. UNGARAN SARI GARMENT</title>
   <style>
     @page { 
       size: A4 landscape; 
@@ -1128,7 +1135,7 @@ const app = createApp({
       <table>
         <tr>
           <td class="lbl">No. Formulir</td>
-          <td class="val">: FRM-WHS-PO-04</td>
+          <td class="val">: ${noFormulir}</td>
         </tr>
         <tr>
           <td class="lbl">Klasifikasi</td>
@@ -1226,6 +1233,7 @@ const app = createApp({
       <p>1. Data pergerakan karton masuk dan keluar bersumber langsung dari catatan operasional real-time Gudang GCWH.</p>
       <p>2. Laporan ini merupakan dokumen resmi pendukung audit kepatuhan buyer, inspeksi QC dan serah terima logistik.</p>
       <p>3. Dilarang melakukan perubahan data secara manual tanpa otorisasi Supervisor Gudang &amp; Factory Manager.</p>
+      <p>4. Validasi Dokumen: <strong style="font-family:Consolas, monospace;color:#0f2744">${noFormulir}</strong></p>
     </div>
 
     <div class="sig-boxes">
