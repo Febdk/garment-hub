@@ -480,54 +480,168 @@ const app = createApp({
     };
 
     const exportToExcel = () => {
-      if (!items.value || items.value.length === 0) {
+      const pos = filteredPOs.value && filteredPOs.value.length > 0 ? filteredPOs.value : items.value;
+      if (!pos || pos.length === 0) {
         alert("Tidak ada data PO untuk diexport!");
         return;
       }
 
-      let csvContent = "\uFEFF";
-      csvContent += `"LAPORAN REKAPITULASI GUDANG - GCWH GARMENT HUB"\r\n`;
-      csvContent += `"Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")}"\r\n\r\n`;
-      csvContent += `"NO PO";"BUYER";"STYLE CODE";"STATUS";"EX-FTY DATE";"KODE WARNA";"TARGET KARTON";"FISIK KARTON";"LOKASI RAK";"HELPER"\r\n`;
+      const activeTabName = adminSubTab.value || "all";
+      const exportDateStr = new Date().toISOString().slice(0, 10);
+      const printDateStr = new Date().toLocaleDateString("id-ID");
 
-      items.value.forEach((po) => {
+      // ── Cek Ketersediaan Library SheetJS (XLSX) untuk Export File .xlsx Murni ──
+      if (typeof XLSX !== "undefined") {
+        const excelRows = [];
+        let no = 1;
+
+        pos.forEach((po) => {
+          const poNum = po.po_number || "";
+          const buyer = po.buyer || "";
+          const style = po.style_code || "";
+          const status = po.status || "";
+          const exFty = po.ex_fty_date ? po.ex_fty_date.split("T")[0] : "";
+          const revExFty = po.revised_ex_fty_date
+            ? po.revised_ex_fty_date.split("T")[0]
+            : "";
+          const qtyIn = Number(po.qty_in) || 0;
+          const qtyOut = Number(po.qty_out) || 0;
+          const colors = po.colors && po.colors.length > 0 ? po.colors : null;
+
+          if (colors) {
+            colors.forEach((c) => {
+              excelRows.push({
+                "NO": no,
+                "BUYER": buyer,
+                "NO. PO": poNum,
+                "STYLE CODE": style,
+                "EX-FTY SHIPMENT": exFty,
+                "REVISI SHIPMENT": revExFty,
+                "KODE WARNA": c.color_code || "-",
+                "TARGET KARTON": Number(c.total_qty) || 0,
+                "KARTON MASUK": qtyIn,
+                "KARTON KELUAR": qtyOut,
+                "FISIK RAK": Number(c.carton_qty) || 0,
+                "LOKASI RAK": c.rack_location || "BELUM SET",
+                "STATUS PO": status,
+                "INSPEKSI INTERNAL": po.inspection_internal_by || "-",
+                "INSPEKSI EKSTERNAL": po.inspection_external_by || "-",
+                "HELPER GUDANG": c.helper_name || "-",
+              });
+            });
+          } else {
+            excelRows.push({
+              "NO": no,
+              "BUYER": buyer,
+              "NO. PO": poNum,
+              "STYLE CODE": style,
+              "EX-FTY SHIPMENT": exFty,
+              "REVISI SHIPMENT": revExFty,
+              "KODE WARNA": "-",
+              "TARGET KARTON": Number(po.total_qty) || 0,
+              "KARTON MASUK": qtyIn,
+              "KARTON KELUAR": qtyOut,
+              "FISIK RAK": 0,
+              "LOKASI RAK": "-",
+              "STATUS PO": status,
+              "INSPEKSI INTERNAL": po.inspection_internal_by || "-",
+              "INSPEKSI EKSTERNAL": po.inspection_external_by || "-",
+              "HELPER GUDANG": "-",
+            });
+          }
+          no++;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(excelRows);
+        ws["!cols"] = [
+          { wch: 6 },  // NO
+          { wch: 22 }, // BUYER
+          { wch: 18 }, // NO. PO
+          { wch: 16 }, // STYLE CODE
+          { wch: 16 }, // EX-FTY SHIPMENT
+          { wch: 16 }, // REVISI SHIPMENT
+          { wch: 14 }, // KODE WARNA
+          { wch: 14 }, // TARGET KARTON
+          { wch: 14 }, // KARTON MASUK
+          { wch: 14 }, // KARTON KELUAR
+          { wch: 12 }, // FISIK RAK
+          { wch: 14 }, // LOKASI RAK
+          { wch: 20 }, // STATUS PO
+          { wch: 20 }, // INSPEKSI INTERNAL
+          { wch: 20 }, // INSPEKSI EKSTERNAL
+          { wch: 16 }, // HELPER GUDANG
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Rekapitulasi PO");
+        XLSX.writeFile(wb, `GCWH_Rekap_PO_${activeTabName}_${exportDateStr}.xlsx`);
+        return;
+      }
+
+      // ── Fallback ke Format CSV (UTF-8 BOM) jika Library XLSX Belum Dimuat ──
+      let csvContent = "\uFEFF";
+      csvContent += `"LAPORAN REKAPITULASI GUDANG - PT. GARMENT HUB INDONESIA (GCWH)"\r\n`;
+      csvContent += `"Kategori Sub-Tab: ${activeTabName.toUpperCase()}"\r\n`;
+      csvContent += `"Tanggal Cetak: ${printDateStr}"\r\n\r\n`;
+      csvContent += `"NO";"BUYER";"NO PO";"STYLE CODE";"EX-FTY SHIPMENT";"REVISI SHIPMENT";"KODE WARNA";"TARGET KARTON";"KARTON MASUK";"KARTON KELUAR";"FISIK RAK";"LOKASI RAK";"STATUS PO";"INSPEKSI INTERNAL";"INSPEKSI EKSTERNAL";"HELPER"\r\n`;
+
+      let rowNo = 1;
+      pos.forEach((po) => {
         const poNum = po.po_number || "";
         const buyer = po.buyer || "";
         const style = po.style_code || "";
         const status = po.status || "";
         const exFty = po.ex_fty_date ? po.ex_fty_date.split("T")[0] : "";
+        const revExFty = po.revised_ex_fty_date ? po.revised_ex_fty_date.split("T")[0] : "";
+        const qtyIn = Number(po.qty_in) || 0;
+        const qtyOut = Number(po.qty_out) || 0;
+        const inspInt = po.inspection_internal_by || "-";
+        const inspExt = po.inspection_external_by || "-";
 
         if (po.colors && po.colors.length > 0) {
           po.colors.forEach((c) => {
             const row = [
-              `"${poNum}"`,
+              rowNo,
               `"${buyer}"`,
+              `"${poNum}"`,
               `"${style}"`,
-              `"${status}"`,
               `"${exFty}"`,
+              `"${revExFty}"`,
               `"${c.color_code || ""}"`,
               c.total_qty || 0,
+              qtyIn,
+              qtyOut,
               c.carton_qty || 0,
               `"${c.rack_location || "-"}"`,
+              `"${status}"`,
+              `"${inspInt}"`,
+              `"${inspExt}"`,
               `"${c.helper_name || "-"}"`,
             ].join(";");
             csvContent += row + "\r\n";
           });
         } else {
           const row = [
-            `"${poNum}"`,
+            rowNo,
             `"${buyer}"`,
+            `"${poNum}"`,
             `"${style}"`,
-            `"${status}"`,
             `"${exFty}"`,
+            `"${revExFty}"`,
             `"-"`,
-            0,
+            po.total_qty || 0,
+            qtyIn,
+            qtyOut,
             0,
             `"-"`,
+            `"${status}"`,
+            `"${inspInt}"`,
+            `"${inspExt}"`,
             `"-"`,
           ].join(";");
           csvContent += row + "\r\n";
         }
+        rowNo++;
       });
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -535,7 +649,7 @@ const app = createApp({
       link.href = URL.createObjectURL(blob);
       link.setAttribute(
         "download",
-        `GCWH_Warehouse_Report_${new Date().toISOString().slice(0, 10)}.csv`,
+        `GCWH_Rekap_PO_${activeTabName}_${exportDateStr}.csv`,
       );
       document.body.appendChild(link);
       link.click();
@@ -543,21 +657,22 @@ const app = createApp({
     };
 
     const printReport = () => {
-      const pos = filteredPOs.value;
+      const pos = filteredPOs.value && filteredPOs.value.length > 0 ? filteredPOs.value : items.value;
       if (!pos || pos.length === 0) {
         alert("Tidak ada data PO untuk dicetak!");
         return;
       }
 
-      // Label sub-tab untuk judul laporan
+      // Label sub-tab untuk judul laporan resmi
       const subTabLabels = {
-        active: "Laporan PO Aktif",
-        overdue: "Laporan PO Overdue",
-        shipped: "Laporan PO Shipped",
-        archive: "Laporan PO Arsip",
+        active: "LAPORAN PURCHASE ORDER AKTIF & ON-PROCESS",
+        overdue: "LAPORAN PURCHASE ORDER OVERDUE / JATUH TEMPO",
+        shipped: "LAPORAN PURCHASE ORDER SELESAI KIRIM (SHIPPED)",
+        archive: "LAPORAN ARSIP PURCHASE ORDER GUDANG",
       };
       const reportTitle =
-        subTabLabels[adminSubTab.value] || "Laporan Purchase Order";
+        subTabLabels[adminSubTab.value] || "LAPORAN MONITORING PURCHASE ORDER (PO) & SHIPMENT";
+
       const now = new Date();
       const printDate = now.toLocaleDateString("id-ID", {
         weekday: "long",
@@ -570,36 +685,61 @@ const app = createApp({
         minute: "2-digit",
       });
 
-      // Hitung summary stats
+      const printedBy = currentUser.value
+        ? `${currentUser.value.full_name || currentUser.value.username} (${(currentUser.value.role || "Admin").toUpperCase()})`
+        : "Administrator Gudang";
+
+      // ── Kalkulasi Metrik & Summary Real-time ──
       const totalPO = pos.length;
       const totalKartonTarget = pos.reduce(
         (s, po) =>
-          s + (po.colors || []).reduce((cs, c) => cs + (c.total_qty || 0), 0),
+          s +
+          (po.colors && po.colors.length > 0
+            ? po.colors.reduce((cs, c) => cs + (Number(c.total_qty) || 0), 0)
+            : Number(po.total_qty) || 0),
+        0,
+      );
+      const totalKartonMasuk = pos.reduce(
+        (s, po) => s + (Number(po.qty_in) || 0),
+        0,
+      );
+      const totalKartonKeluar = pos.reduce(
+        (s, po) => s + (Number(po.qty_out) || 0),
         0,
       );
       const totalKartonFisik = pos.reduce(
         (s, po) =>
-          s + (po.colors || []).reduce((cs, c) => cs + (c.carton_qty || 0), 0),
+          s +
+          (po.colors && po.colors.length > 0
+            ? po.colors.reduce((cs, c) => cs + (Number(c.carton_qty) || 0), 0)
+            : 0),
         0,
       );
+
+      const pctRealisasi =
+        totalKartonTarget > 0
+          ? ((totalKartonMasuk / totalKartonTarget) * 100).toFixed(1)
+          : "0.0";
+
       const statusCount = {};
       pos.forEach((po) => {
-        statusCount[po.status] = (statusCount[po.status] || 0) + 1;
+        const st = po.status || "Pending";
+        statusCount[st] = (statusCount[st] || 0) + 1;
       });
 
-      const statusBadgeColor = (s) => {
+      const statusBadgeStyle = (s) => {
         const m = {
-          Pending: "#64748b",
-          "Inspection Internal": "#6366f1",
-          "Inspection External": "#8b5cf6",
-          "Ready to Ship": "#0ea5e9",
-          Shipped: "#10b981",
-          Archived: "#94a3b8",
+          Pending: "background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;",
+          "Inspection Internal": "background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;",
+          "Inspection External": "background:#faf5ff;color:#6b21a8;border:1px solid #e9d5ff;",
+          "Ready to Ship": "background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;",
+          Shipped: "background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;",
+          Archived: "background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;",
         };
-        return m[s] || "#64748b";
+        return m[s] || "background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;";
       };
 
-      // Build rows HTML
+      // ── Susun Baris Tabel Data ──
       let rows = "";
       pos.forEach((po, idx) => {
         const exFty = po.ex_fty_date ? po.ex_fty_date.split("T")[0] : "-";
@@ -609,55 +749,80 @@ const app = createApp({
         const shipDate = revised || exFty;
         const colors = po.colors || [];
         const rowspan = Math.max(colors.length, 1);
-        const statusColor = statusBadgeColor(po.status);
         const isOverdue =
           shipDate < now.toISOString().split("T")[0] &&
           !["Shipped", "Archived"].includes(po.status);
 
         const rowBg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+        const qtyIn = Number(po.qty_in) || 0;
+        const qtyOut = Number(po.qty_out) || 0;
+
+        // Kolom Karton Masuk (data karton masuk terinput dari detail PO)
+        const cellKtnMasuk = `
+          <td rowspan="${rowspan}" style="text-align:center;vertical-align:middle;background:${rowBg};border:1px solid #cbd5e1;">
+            <div style="font-size:12px;font-weight:800;font-family:Consolas, monospace;color:#047857">
+              ${qtyIn.toLocaleString("id-ID")}
+            </div>
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.3px">Ktn Masuk</div>
+            ${qtyOut > 0 ? `<div style="font-size:8px;color:#be123c;font-weight:700;margin-top:2px">Keluar: ${qtyOut.toLocaleString("id-ID")}</div>` : ""}
+          </td>
+        `;
 
         if (colors.length === 0) {
           rows += `
             <tr style="background:${rowBg}">
-              <td style="text-align:center;color:#94a3b8">${idx + 1}</td>
-              <td><span style="font-size:9px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">${po.buyer || "-"}</span></td>
-              <td style="font-weight:700;font-family:monospace;font-size:11px">${po.po_number || "-"}</td>
-              <td style="font-family:monospace;font-size:10px;color:#64748b">${po.style_code || "-"}</td>
-              <td style="font-family:monospace;text-align:center;${isOverdue ? "color:#ef4444;font-weight:700" : ""}">
-                ${revised ? `<span style="text-decoration:line-through;color:#94a3b8;font-size:9px">${exFty}</span><br><span style="color:#ef4444">${revised} ⚠</span>` : shipDate}
+              <td style="text-align:center;font-weight:700;color:#64748b;border:1px solid #cbd5e1">${idx + 1}</td>
+              <td style="border:1px solid #cbd5e1">
+                <span style="font-size:9px;font-weight:800;color:#0f2744;text-transform:uppercase">${po.buyer || "-"}</span>
               </td>
-              <td style="text-align:center;color:#94a3b8">-</td>
-              <td style="text-align:center;color:#94a3b8">-</td>
-              <td style="text-align:center;color:#94a3b8">-</td>
-              <td style="text-align:center">
-                <span style="background:${statusColor};color:#fff;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:0.5px">${po.status || "-"}</span>
+              <td style="font-weight:800;font-family:Consolas, monospace;font-size:11px;color:#0f2744;border:1px solid #cbd5e1">${po.po_number || "-"}</td>
+              <td style="font-family:Consolas, monospace;font-size:10px;font-weight:600;color:#334155;border:1px solid #cbd5e1">${po.style_code || "-"}</td>
+              <td style="font-family:Consolas, monospace;text-align:center;border:1px solid #cbd5e1;${isOverdue ? "color:#be123c;font-weight:800;" : "color:#1e293b;"}">
+                ${revised ? `<span style="text-decoration:line-through;color:#94a3b8;font-size:9px">${exFty}</span><br><span style="color:#be123c;font-weight:800">${revised} [REV]</span>` : shipDate}
+              </td>
+              <td style="text-align:center;color:#94a3b8;border:1px solid #cbd5e1">-</td>
+              <td style="text-align:right;font-weight:700;font-family:Consolas, monospace;font-size:11px;border:1px solid #cbd5e1">${(po.total_qty || 0).toLocaleString("id-ID")}</td>
+              ${cellKtnMasuk}
+              <td style="text-align:right;font-weight:700;font-family:Consolas, monospace;font-size:11px;color:#64748b;border:1px solid #cbd5e1">-</td>
+              <td style="text-align:center;color:#94a3b8;border:1px solid #cbd5e1">-</td>
+              <td style="text-align:center;border:1px solid #cbd5e1">
+                <span style="${statusBadgeStyle(po.status)};padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.3px;display:inline-block">${po.status || "-"}</span>
               </td>
             </tr>`;
         } else {
           colors.forEach((c, ci) => {
             const isFirst = ci === 0;
+            const targetColorQty = Number(c.total_qty) || 0;
+            const fisikColorQty = Number(c.carton_qty) || 0;
+            const rackLoc = c.rack_location && c.rack_location !== "-" && c.rack_location !== "BELUM SET"
+              ? c.rack_location
+              : "BELUM SET";
+            const isRackSet = rackLoc !== "BELUM SET";
+
             rows += `
               <tr style="background:${rowBg}">
-                ${isFirst ? `<td rowspan="${rowspan}" style="text-align:center;color:#94a3b8;vertical-align:middle">${idx + 1}</td>` : ""}
-                ${isFirst ? `<td rowspan="${rowspan}" style="vertical-align:middle"><span style="font-size:9px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">${po.buyer || "-"}</span></td>` : ""}
-                ${isFirst ? `<td rowspan="${rowspan}" style="font-weight:700;font-family:monospace;font-size:11px;vertical-align:middle">${po.po_number || "-"}</td>` : ""}
-                ${isFirst ? `<td rowspan="${rowspan}" style="font-family:monospace;font-size:10px;color:#64748b;vertical-align:middle">${po.style_code || "-"}</td>` : ""}
+                ${isFirst ? `<td rowspan="${rowspan}" style="text-align:center;font-weight:700;color:#64748b;vertical-align:middle;border:1px solid #cbd5e1">${idx + 1}</td>` : ""}
+                ${isFirst ? `<td rowspan="${rowspan}" style="vertical-align:middle;border:1px solid #cbd5e1"><span style="font-size:10px;font-weight:800;color:#0f2744;text-transform:uppercase">${po.buyer || "-"}</span></td>` : ""}
+                ${isFirst ? `<td rowspan="${rowspan}" style="font-weight:800;font-family:Consolas, monospace;font-size:11px;color:#0f2744;vertical-align:middle;border:1px solid #cbd5e1">${po.po_number || "-"}</td>` : ""}
+                ${isFirst ? `<td rowspan="${rowspan}" style="font-family:Consolas, monospace;font-size:10px;font-weight:600;color:#334155;vertical-align:middle;border:1px solid #cbd5e1">${po.style_code || "-"}</td>` : ""}
                 ${
                   isFirst
-                    ? `<td rowspan="${rowspan}" style="font-family:monospace;text-align:center;vertical-align:middle;${isOverdue ? "color:#ef4444;font-weight:700" : ""}">
-                  ${revised ? `<span style="text-decoration:line-through;color:#94a3b8;font-size:9px">${exFty}</span><br><span style="color:#ef4444">${revised} ⚠</span>` : shipDate}
+                    ? `<td rowspan="${rowspan}" style="font-family:Consolas, monospace;text-align:center;vertical-align:middle;border:1px solid #cbd5e1;${isOverdue ? "color:#be123c;font-weight:800;" : "color:#1e293b;"}">
+                  ${revised ? `<span style="text-decoration:line-through;color:#94a3b8;font-size:9px">${exFty}</span><br><span style="color:#be123c;font-weight:800">${revised} [REV]</span>` : shipDate}
                 </td>`
                     : ""
                 }
-                <td style="font-family:monospace;font-size:10px;font-weight:600;text-align:center">${c.color_code || "-"}</td>
-                <td style="text-align:center;font-weight:700;font-family:monospace">${(c.total_qty || 0).toLocaleString("id-ID")}</td>
-                <td style="text-align:center;font-family:monospace;color:${c.rack_location && c.rack_location !== "-" && c.rack_location !== "BELUM SET" ? "#0f172a" : "#ef4444"};font-weight:600">
-                  ${c.rack_location && c.rack_location !== "-" && c.rack_location !== "BELUM SET" ? c.rack_location : "BELUM SET"}
+                <td style="font-family:Consolas, monospace;font-size:10px;font-weight:700;text-align:center;color:#0f2744;border:1px solid #cbd5e1">${c.color_code || "-"}</td>
+                <td style="text-align:right;font-weight:700;font-family:Consolas, monospace;font-size:11px;color:#0f2744;border:1px solid #cbd5e1">${targetColorQty.toLocaleString("id-ID")}</td>
+                ${isFirst ? cellKtnMasuk : ""}
+                <td style="text-align:right;font-weight:700;font-family:Consolas, monospace;font-size:11px;color:#0f2744;border:1px solid #cbd5e1">${fisikColorQty.toLocaleString("id-ID")}</td>
+                <td style="text-align:center;font-family:Consolas, monospace;font-size:10px;font-weight:700;border:1px solid #cbd5e1;color:${isRackSet ? "#0f2744" : "#be123c"}">
+                  ${isRackSet ? rackLoc : '<span style="background:#fff1f2;color:#be123c;padding:1px 5px;border-radius:4px;border:1px solid #fecdd3">BELUM SET</span>'}
                 </td>
                 ${
                   isFirst
-                    ? `<td rowspan="${rowspan}" style="text-align:center;vertical-align:middle">
-                  <span style="background:${statusColor};color:#fff;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:0.5px">${po.status || "-"}</span>
+                    ? `<td rowspan="${rowspan}" style="text-align:center;vertical-align:middle;border:1px solid #cbd5e1">
+                  <span style="${statusBadgeStyle(po.status)};padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.3px;display:inline-block">${po.status || "-"}</span>
                 </td>`
                     : ""
                 }
@@ -666,65 +831,280 @@ const app = createApp({
         }
       });
 
-      // Summary stat cards
-      const statCards = Object.entries(statusCount)
+      // ── Status Pills Mini Summary ──
+      const statusPills = Object.entries(statusCount)
         .map(
           ([s, n]) =>
-            `<div style="display:inline-block;margin:0 8px 6px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 14px;text-align:center">
-          <div style="font-size:18px;font-weight:800;color:${statusBadgeColor(s)}">${n}</div>
-          <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${s}</div>
-        </div>`,
+            `<span style="${statusBadgeStyle(s)};padding:3px 10px;border-radius:6px;font-size:9px;font-weight:800;margin-right:6px;display:inline-block">
+              ${s.toUpperCase()}: <b style="font-size:11px">${n}</b>
+            </span>`,
         )
         .join("");
 
+      // ── Template HTML Dokumen Standar Laporan PT ──
       const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>${reportTitle} — GCWH</title>
+  <title>${reportTitle} — PT. GARMENT HUB INDONESIA</title>
   <style>
-    @page { size: A4 landscape; margin: 12mm 14mm; }
+    @page { 
+      size: A4 landscape; 
+      margin: 10mm 12mm 12mm 12mm; 
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #0f172a; background: #fff; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      font-size: 10px; 
+      color: #0f172a; 
+      background: #fff; 
+      line-height: 1.35;
+    }
 
-    /* ── KOP SURAT ── */
-    .kop { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 14px; }
-    .kop-left { display: flex; align-items: center; gap: 14px; }
-    .kop-logo { width: 44px; height: 44px; background: #1e3a5f; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 900; letter-spacing: -1px; flex-shrink: 0; }
-    .kop-company { }
-    .kop-company-name { font-size: 16px; font-weight: 800; color: #1e3a5f; letter-spacing: -0.5px; }
-    .kop-company-sub  { font-size: 9px; color: #64748b; margin-top: 1px; }
-    .kop-right { text-align: right; }
-    .kop-report-title { font-size: 13px; font-weight: 800; color: #1e3a5f; }
-    .kop-report-meta  { font-size: 9px; color: #64748b; margin-top: 3px; line-height: 1.6; }
+    /* ── KOP SURAT FORMAL STANDAR PT ── */
+    .kop-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+    }
+    .kop-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .kop-logo {
+      width: 44px;
+      height: 44px;
+      background: #0f2744;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      box-shadow: 0 2px 4px rgba(15, 39, 68, 0.2);
+    }
+    .kop-company h1 {
+      font-size: 15px;
+      font-weight: 900;
+      color: #0f2744;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .kop-company h2 {
+      font-size: 10px;
+      font-weight: 700;
+      color: #2563eb;
+      letter-spacing: 0.2px;
+      text-transform: uppercase;
+    }
+    .kop-company p {
+      font-size: 8.5px;
+      color: #64748b;
+      margin-top: 2px;
+    }
 
-    /* ── SUMMARY ── */
-    .summary { background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; }
-    .summary-title { font-size: 10px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .summary-grid { display: flex; gap: 0; flex-wrap: wrap; }
-    .summary-item { margin-right: 24px; margin-bottom: 4px; }
-    .summary-item .val { font-size: 20px; font-weight: 900; color: #1e3a5f; line-height: 1; }
-    .summary-item .lbl { font-size: 9px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-    .summary-divider { width: 1px; background: #bfdbfe; margin: 0 20px 0 4px; }
+    /* ── KOTAK DOKUMEN KONTROL RESMI ── */
+    .kop-control {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #f8fafc;
+      padding: 6px 10px;
+      font-size: 8.5px;
+      min-width: 230px;
+      text-align: left;
+    }
+    .kop-control table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .kop-control td {
+      padding: 1.5px 3px;
+      border: none !important;
+    }
+    .kop-control td.lbl {
+      color: #64748b;
+      font-weight: 600;
+      width: 80px;
+    }
+    .kop-control td.val {
+      color: #0f2744;
+      font-weight: 700;
+      font-family: Consolas, monospace;
+    }
 
-    /* ── TABLE ── */
-    table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    thead tr { background: #1e3a5f; color: #fff; }
-    thead th { padding: 7px 8px; text-align: left; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
-    thead th.center { text-align: center; }
-    tbody tr { border-bottom: 1px solid #e2e8f0; }
-    tbody tr:last-child { border-bottom: 2px solid #1e3a5f; }
-    tbody td { padding: 5px 8px; vertical-align: middle; }
-    tfoot tr { background: #f1f5f9; }
-    tfoot td { padding: 6px 8px; font-weight: 700; font-size: 10px; border-top: 2px solid #1e3a5f; }
+    /* ── GARIS GANDA KOP RESMI PT ── */
+    .kop-divider {
+      margin-top: 4px;
+      margin-bottom: 10px;
+      border-top: 2.5px solid #0f2744;
+      border-bottom: 1px solid #0f2744;
+      height: 3px;
+    }
 
-    /* ── FOOTER ── */
-    .report-footer { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
-    .footer-note { font-size: 8px; color: #94a3b8; }
-    .signature-area { display: flex; gap: 40px; }
-    .signature-box { text-align: center; }
-    .signature-box .sig-line { width: 120px; border-top: 1px solid #334155; margin: 28px auto 4px; }
-    .signature-box .sig-label { font-size: 9px; color: #334155; font-weight: 600; }
+    /* ── JUDUL LAPORAN ── */
+    .report-header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .report-title {
+      font-size: 13px;
+      font-weight: 900;
+      color: #0f2744;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .report-subtitle {
+      font-size: 9px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    /* ── EXECUTIVE SUMMARY METRICS ── */
+    .summary-box {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .metric-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .metric-item {
+      text-align: center;
+    }
+    .metric-item .val {
+      font-size: 15px;
+      font-weight: 900;
+      font-family: Consolas, monospace;
+      color: #0f2744;
+      line-height: 1;
+    }
+    .metric-item .val.green { color: #047857; }
+    .metric-item .val.red   { color: #be123c; }
+    .metric-item .lbl {
+      font-size: 8px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-top: 3px;
+    }
+    .metric-sep {
+      width: 1px;
+      height: 24px;
+      background: #cbd5e1;
+    }
+    .status-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+
+    /* ── TABEL UTAMA LAPORAN ── */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+      border: 1.5px solid #0f2744;
+    }
+    table.data-table thead tr {
+      background: #0f2744;
+      color: #ffffff;
+    }
+    table.data-table th {
+      padding: 6px 5px;
+      font-weight: 800;
+      font-size: 8.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border: 1px solid #1e3a5f;
+      text-align: left;
+    }
+    table.data-table th.center { text-align: center; }
+    table.data-table th.right  { text-align: right; }
+    table.data-table td {
+      padding: 4px 6px;
+      vertical-align: middle;
+      border: 1px solid #cbd5e1;
+    }
+    table.data-table tfoot tr {
+      background: #f1f5f9;
+      font-weight: 800;
+      border-top: 2px solid #0f2744;
+      border-bottom: 2.5px double #0f2744;
+    }
+    table.data-table tfoot td {
+      padding: 5px 6px;
+      font-size: 9.5px;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* ── LEMBAR PENGESAHAN / SIGNATURE ── */
+    .signature-section {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      page-break-inside: avoid;
+    }
+    .sig-meta {
+      width: 38%;
+      font-size: 8px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .sig-meta .note-title {
+      font-weight: 800;
+      color: #0f2744;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .sig-boxes {
+      width: 60%;
+      display: flex;
+      justify-content: flex-end;
+      gap: 20px;
+    }
+    .sig-card {
+      width: 140px;
+      text-align: center;
+      font-size: 8.5px;
+    }
+    .sig-card .sig-role {
+      font-weight: 800;
+      color: #0f2744;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .sig-card .sig-date {
+      font-size: 8px;
+      color: #64748b;
+      margin-bottom: 40px;
+    }
+    .sig-card .sig-line {
+      border-bottom: 1px solid #0f2744;
+      margin-bottom: 3px;
+    }
+    .sig-card .sig-name {
+      font-weight: 700;
+      color: #0f2744;
+      font-size: 8.5px;
+    }
 
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -734,62 +1114,95 @@ const app = createApp({
 </head>
 <body>
 
-  <!-- KOP SURAT -->
-  <div class="kop">
-    <div class="kop-left">
+  <!-- ── 1. KOP SURAT RESMI PT ── -->
+  <div class="kop-wrapper">
+    <div class="kop-brand">
       <div class="kop-logo">GC</div>
       <div class="kop-company">
-        <div class="kop-company-name">GCWH — Garment Carton &amp; Warehouse Hub</div>
-        <div class="kop-company-sub">Sistem Monitoring Purchase Order, Inspeksi &amp; Shipment</div>
-        <div class="kop-company-sub">garment-hub.eformku.id</div>
+        <h1>PT. GARMENT HUB INDONESIA</h1>
+        <h2>Warehouse, Finishing &amp; Multi-Buyer Logistics Hub</h2>
+        <p>Kawasan Industri Manufaktur Tekstil Terpadu | Dokumen Internal Resmi Pergudangan</p>
       </div>
     </div>
-    <div class="kop-right">
-      <div class="kop-report-title">${reportTitle}</div>
-      <div class="kop-report-meta">
-        Tanggal Cetak: ${printDate}<br>
-        Jam: ${printTime} WIB<br>
-        Total Record: <strong>${totalPO} PO</strong>
-      </div>
+    <div class="kop-control">
+      <table>
+        <tr>
+          <td class="lbl">No. Formulir</td>
+          <td class="val">: FRM-WHS-PO-04</td>
+        </tr>
+        <tr>
+          <td class="lbl">Klasifikasi</td>
+          <td class="val">: INTERNAL REPORT</td>
+        </tr>
+        <tr>
+          <td class="lbl">Waktu Cetak</td>
+          <td class="val">: ${printDate}, ${printTime} WIB</td>
+        </tr>
+        <tr>
+          <td class="lbl">Operator Cetak</td>
+          <td class="val">: ${printedBy}</td>
+        </tr>
+      </table>
     </div>
   </div>
 
-  <!-- SUMMARY STATS -->
-  <div class="summary">
-    <div class="summary-title">Ringkasan Data</div>
-    <div class="summary-grid">
-      <div class="summary-item">
+  <div class="kop-divider"></div>
+
+  <!-- ── 2. JUDUL LAPORAN ── -->
+  <div class="report-header">
+    <div class="report-title">${reportTitle}</div>
+    <div class="report-subtitle">Rekapitulasi Fisik Karton, Mutasi Masuk/Keluar &amp; Status Kesiapan Pengiriman</div>
+  </div>
+
+  <!-- ── 3. EXECUTIVE SUMMARY METRICS ── -->
+  <div class="summary-box">
+    <div class="metric-group">
+      <div class="metric-item">
         <div class="val">${totalPO}</div>
         <div class="lbl">Total PO</div>
       </div>
-      <div class="summary-divider"></div>
-      <div class="summary-item">
+      <div class="metric-sep"></div>
+      <div class="metric-item">
         <div class="val">${totalKartonTarget.toLocaleString("id-ID")}</div>
         <div class="lbl">Target Karton</div>
       </div>
-      <div class="summary-divider"></div>
-      <div class="summary-item">
-        <div class="val">${totalKartonFisik.toLocaleString("id-ID")}</div>
-        <div class="lbl">Fisik Karton</div>
+      <div class="metric-sep"></div>
+      <div class="metric-item">
+        <div class="val green">${totalKartonMasuk.toLocaleString("id-ID")}</div>
+        <div class="lbl">Karton Masuk (${pctRealisasi}%)</div>
       </div>
-      <div class="summary-divider"></div>
-      <div style="flex:1">${statCards}</div>
+      <div class="metric-sep"></div>
+      <div class="metric-item">
+        <div class="val red">${totalKartonKeluar.toLocaleString("id-ID")}</div>
+        <div class="lbl">Karton Keluar</div>
+      </div>
+      <div class="metric-sep"></div>
+      <div class="metric-item">
+        <div class="val">${totalKartonFisik.toLocaleString("id-ID")}</div>
+        <div class="lbl">Fisik di Rak</div>
+      </div>
+    </div>
+
+    <div class="status-summary">
+      ${statusPills}
     </div>
   </div>
 
-  <!-- TABLE -->
-  <table>
+  <!-- ── 4. TABEL DATA RESMI ── -->
+  <table class="data-table">
     <thead>
       <tr>
-        <th style="width:28px" class="center">No</th>
-        <th style="width:110px">Buyer</th>
-        <th style="width:110px">No. PO</th>
-        <th style="width:90px">Style Code</th>
-        <th style="width:90px" class="center">Ex-Fty / Shipment</th>
-        <th style="width:70px" class="center">Kode Warna</th>
-        <th style="width:70px" class="center">Target Ktn</th>
-        <th style="width:80px" class="center">Lokasi Rak</th>
-        <th style="width:100px" class="center">Status</th>
+        <th style="width:26px" class="center">No</th>
+        <th style="width:95px">Buyer</th>
+        <th style="width:95px">No. PO</th>
+        <th style="width:85px">Style Code</th>
+        <th style="width:85px" class="center">Ex-Fty / Shipment</th>
+        <th style="width:65px" class="center">Warna</th>
+        <th style="width:68px" class="right">Target Ktn</th>
+        <th style="width:78px" class="center">Ktn Masuk</th>
+        <th style="width:68px" class="right">Fisik Rak</th>
+        <th style="width:78px" class="center">Lokasi Rak</th>
+        <th style="width:95px" class="center">Status</th>
       </tr>
     </thead>
     <tbody>
@@ -797,33 +1210,57 @@ const app = createApp({
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="6" style="text-align:right;color:#475569">TOTAL KARTON:</td>
-        <td style="text-align:center;color:#1e3a5f;font-size:12px">${totalKartonTarget.toLocaleString("id-ID")}</td>
-        <td colspan="2"></td>
+        <td colspan="6" style="text-align:right;font-weight:800;color:#0f2744;text-transform:uppercase;letter-spacing:0.5px">TOTAL AKUMULASI GUDANG:</td>
+        <td style="text-align:right;font-weight:900;font-family:Consolas, monospace;color:#0f2744;font-size:10.5px">${totalKartonTarget.toLocaleString("id-ID")}</td>
+        <td style="text-align:center;font-weight:900;font-family:Consolas, monospace;color:#047857;font-size:10.5px">${totalKartonMasuk.toLocaleString("id-ID")}</td>
+        <td style="text-align:right;font-weight:900;font-family:Consolas, monospace;color:#0f2744;font-size:10.5px">${totalKartonFisik.toLocaleString("id-ID")}</td>
+        <td colspan="2" style="text-align:center;font-size:8.5px;color:#64748b">Verified by GCWH System</td>
       </tr>
     </tfoot>
   </table>
 
-  <!-- FOOTER -->
-  <div class="report-footer">
-    <div class="footer-note">
-      Dokumen ini digenerate otomatis oleh sistem GCWH pada ${printDate} pukul ${printTime} WIB.<br>
-      Data bersumber dari database warehouse real-time. Harap verifikasi ulang sebelum digunakan sebagai dokumen resmi.
+  <!-- ── 5. LEMBAR PENGESAHAN (APPROVAL MATRIX) ── -->
+  <div class="signature-section">
+    <div class="sig-meta">
+      <div class="note-title">Catatan Pengesahan Laporan:</div>
+      <p>1. Data pergerakan karton masuk dan keluar bersumber langsung dari catatan operasional real-time Gudang GCWH.</p>
+      <p>2. Laporan ini merupakan dokumen resmi pendukung audit kepatuhan buyer, inspeksi QC dan serah terima logistik.</p>
+      <p>3. Dilarang melakukan perubahan data secara manual tanpa otorisasi Supervisor Gudang &amp; Factory Manager.</p>
     </div>
-    <div class="signature-area">
-      <div class="signature-box">
+
+    <div class="sig-boxes">
+      <div class="sig-card">
+        <div class="sig-role">Dibuat Oleh:</div>
+        <div class="sig-date">Tgl: ${printDate}</div>
         <div class="sig-line"></div>
-        <div class="sig-label">Warehouse Admin</div>
+        <div class="sig-name">${currentUser.value ? (currentUser.value.full_name || currentUser.value.username) : "Warehouse Admin"}</div>
+        <div style="font-size:7.5px;color:#64748b">Warehouse Administrator</div>
       </div>
-      <div class="signature-box">
+
+      <div class="sig-card">
+        <div class="sig-role">Diperiksa Oleh:</div>
+        <div class="sig-date">Tgl: .................................</div>
         <div class="sig-line"></div>
-        <div class="sig-label">Warehouse Manager</div>
+        <div class="sig-name">( ..................................... )</div>
+        <div style="font-size:7.5px;color:#64748b">Supervisor QC &amp; Gudang</div>
+      </div>
+
+      <div class="sig-card">
+        <div class="sig-role">Disetujui Oleh:</div>
+        <div class="sig-date">Tgl: .................................</div>
+        <div class="sig-line"></div>
+        <div class="sig-name">( ..................................... )</div>
+        <div style="font-size:7.5px;color:#64748b">Factory / Warehouse Head</div>
       </div>
     </div>
   </div>
 
   <script>
-    window.onload = function() { window.print(); }
+    window.onload = function() { 
+      setTimeout(function() {
+        window.print();
+      }, 300);
+    };
   <\/script>
 </body>
 </html>`;

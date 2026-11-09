@@ -128,8 +128,18 @@ export default {
           </div>
 
           <div class="flex items-center gap-2 no-print">
-            <button @click="$emit('export-excel')" class="px-3 py-1.5 bg-stamp-50 hover:bg-stamp-100 text-stamp-700 border border-stamp-200 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">Excel</button>
-            <button @click="$emit('print-pdf')" class="px-3 py-1.5 bg-ink-100 hover:bg-ink-200 text-ink-800 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">Cetak / PDF</button>
+            <button @click="$emit('export-excel')" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer" title="Export Rekap PO ke Excel (.xlsx)">
+              <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2v2h3V6H5zm5 0v2h5V6h-5zm-5 4v2h3v-2H5zm5 0v2h5v-2h-5zm-5 4v2h3v-2H5zm5 0v2h5v-2h-5z" clip-rule="evenodd" />
+              </svg>
+              <span>Excel (.xlsx)</span>
+            </button>
+            <button @click="$emit('print-pdf')" class="px-3 py-1.5 bg-ink-100 hover:bg-ink-200 text-ink-800 dark:bg-ink-700 dark:text-ink-100 border border-ink-300 dark:border-ink-600 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer" title="Cetak Laporan Resmi Standar PT / PDF">
+              <svg class="w-3.5 h-3.5 text-ink-600 dark:text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              <span>Cetak / PDF</span>
+            </button>
           </div>
         </div>
 
