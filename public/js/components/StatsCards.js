@@ -6,53 +6,42 @@ export default {
   },
   emits: ["toggle-urgent"],
   template: `
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white dark:bg-ink-800 rounded-2xl p-4 border border-ink-200 dark:border-ink-600 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-[11px] font-data uppercase tracking-wider text-ink-400">Total PO</p>
-          <h3 class="font-display text-2xl font-bold text-ink-900 dark:text-paper-50 mt-1">
-            {{ stats.total_po }}
-          </h3>
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="Ringkasan operasional">
+      <article class="metric-card">
+        <div class="metric-card__icon metric-card__icon--blue" aria-hidden="true">PO</div>
+        <div class="metric-card__content">
+          <p class="metric-card__label">Total purchase order</p>
+          <strong class="metric-card__value">{{ stats.total_po || 0 }}</strong>
+          <span class="metric-card__hint">Master PO tercatat</span>
         </div>
-        <div class="tag border-2 text-ink-500 dark:text-ink-300 px-2 py-1.5">PO</div>
-      </div>
+      </article>
 
-      <div class="bg-white dark:bg-ink-800 rounded-2xl p-4 border border-ink-200 dark:border-ink-600 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-[11px] font-data uppercase tracking-wider text-ink-400">Karton Masuk</p>
-          <h3 class="font-display text-2xl font-bold text-ink-900 dark:text-paper-50 mt-1">
-            {{ stats.total_actual_cartons }}
-            <span class="font-data text-xs text-ink-400 font-normal">/ {{ stats.total_target_cartons }}</span>
-          </h3>
+      <article class="metric-card">
+        <div class="metric-card__icon metric-card__icon--indigo" aria-hidden="true">CT</div>
+        <div class="metric-card__content">
+          <p class="metric-card__label">Karton tercatat</p>
+          <strong class="metric-card__value">{{ stats.total_actual_cartons || 0 }}</strong>
+          <span class="metric-card__hint">dari {{ stats.total_target_cartons || 0 }} target</span>
         </div>
-        <div class="tag border-2 text-indigo-600 dark:text-indigo-300 px-2 py-1.5">CTN</div>
-      </div>
+      </article>
 
-      <div class="bg-white dark:bg-ink-800 rounded-2xl p-4 border border-ink-200 dark:border-ink-600 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-[11px] font-data uppercase tracking-wider text-ink-400">Ready to Ship</p>
-          <h3 class="font-display text-2xl font-bold text-stamp-600 dark:text-stamp-300 mt-1">
-            {{ stats.ready_to_ship }}
-          </h3>
+      <article class="metric-card">
+        <div class="metric-card__icon metric-card__icon--green" aria-hidden="true">RT</div>
+        <div class="metric-card__content">
+          <p class="metric-card__label">Ready to ship</p>
+          <strong class="metric-card__value metric-card__value--green">{{ stats.ready_to_ship || 0 }}</strong>
+          <span class="metric-card__hint">PO siap dikirim</span>
         </div>
-        <div class="tag border-2 text-stamp-600 dark:text-stamp-300 px-2 py-1.5">RTS</div>
-      </div>
+      </article>
 
-      <button
-        type="button"
-        @click="$emit('toggle-urgent')"
-        class="bg-alarm-50/70 dark:bg-alarm-700/20 rounded-2xl p-4 border border-alarm-300 dark:border-alarm-600 shadow-sm flex items-center justify-between text-left hover:border-alarm-500 transition"
-      >
-        <div>
-          <p class="text-[11px] font-data font-bold uppercase tracking-wider text-alarm-600 dark:text-alarm-300">
-            Urgent (H-2 / Inspeksi)
-          </p>
-          <h3 class="font-display text-2xl font-bold text-alarm-700 dark:text-alarm-300 mt-1">
-            {{ criticalCount }} PO
-          </h3>
+      <button type="button" @click="$emit('toggle-urgent')" class="metric-card metric-card--urgent" :aria-label="'Tampilkan ' + criticalCount + ' PO urgent'">
+        <div class="metric-card__icon metric-card__icon--red" aria-hidden="true">!</div>
+        <div class="metric-card__content">
+          <p class="metric-card__label metric-card__label--red">Perlu perhatian</p>
+          <strong class="metric-card__value metric-card__value--red">{{ criticalCount }}</strong>
+          <span class="metric-card__hint">H-2 / proses inspeksi</span>
         </div>
-        <div class="stamp text-alarm-600 dark:text-alarm-300 animate-pulse">URG</div>
       </button>
-    </div>
+    </section>
   `,
 };

@@ -83,6 +83,13 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap"
     />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        document.querySelector('meta[name="color-scheme"]').content =
+          localStorage.getItem("theme") || "light dark";
+      } catch (e) {}
+    </script>
     <meta name="theme-color" content="#0b0d11" />
     <link rel="stylesheet" href="./css/theme.css" />
     <style>
@@ -108,6 +115,7 @@
         :is-dark-mode="isDarkMode"
         :active-tab="activeTab"
         :current-user="currentUser"
+        :is-admin="isAdmin"
         @toggle-theme="toggleTheme"
         @open-logo="showLogoModal = true"
         @open-user-modal="showUserModal = true"
@@ -119,6 +127,23 @@
       <main
         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6"
       >
+        <!-- Dashboard intro -->
+        <section class="dashboard-intro no-print">
+          <div>
+            <p class="dashboard-eyebrow">{{ isAdmin ? 'ADMIN OPERATIONS' : 'HELPER OPERATIONS' }}</p>
+            <h1 class="dashboard-title">
+              {{ isAdmin ? (activeTab === 'admin' ? 'Kontrol purchase order' : 'Operasional penempatan gudang') : 'Operasional penempatan gudang' }}
+            </h1>
+            <p class="dashboard-copy">
+              {{ isAdmin ? 'Pantau PO, inspeksi, karton, shipment dan aktivitas gudang dari satu workspace.' : 'Cari PO, perbarui lokasi rak dan pantau pergerakan karton dengan cepat.' }}
+            </p>
+          </div>
+          <div class="dashboard-status">
+            <span class="dashboard-status__dot"></span>
+            <span>Sistem aktif</span>
+          </div>
+        </section>
+
         <!-- NOTIFICATION BANNER -->
         <transition
           enter-active-class="transition duration-300 ease-out"
@@ -128,21 +153,12 @@
         >
           <div
             v-if="message"
-            class="p-4 rounded-xl bg-stamp-50 dark:bg-stamp-700/20 text-stamp-700 dark:text-stamp-300 border border-stamp-200 dark:border-stamp-700 shadow-sm flex items-center justify-between no-print"
+            class="notification-banner no-print"
+            role="status"
           >
-            <div
-              class="flex items-center gap-2 text-sm font-data font-semibold"
-            >
-              <span
-                class="stamp border-stamp-600 text-stamp-600 dark:text-stamp-300"
-                >OK</span
-              >
-              <span>{{ message }}</span>
-            </div>
-            <button
-              @click="message = ''"
-              class="text-stamp-500 hover:text-stamp-700 font-bold"
-            >
+            <span class="notification-banner__icon" aria-hidden="true">✓</span>
+            <span>{{ message }}</span>
+            <button @click="message = ''" class="notification-banner__close" aria-label="Tutup notifikasi">
               ✕
             </button>
           </div>
@@ -157,7 +173,7 @@
           ></stats-cards>
         </div>
 
-        <div class="workspace">
+        <div class="workspace" :class="{ 'workspace--helper': !isAdmin }">
           <aside class="rail">
             <div class="no-print">
               <critical-panel
@@ -208,38 +224,33 @@
               ></filter-toolbar>
             </div>
 
-            <!-- TAB 1: HELPER BOY DASHBOARD -->
+            <!-- TAB 1: HELPER WORKSPACE -->
             <div v-if="activeTab === 'helper'" class="space-y-4 no-print">
-              <div class="flex justify-between items-center">
-                <h2
-                  class="font-display text-lg font-bold text-ink-900 dark:text-white"
-                >
-                  Penempatan Rak &amp; Fisik Karton Gudang
-                </h2>
-                <span class="text-xs font-data text-ink-400 font-medium"
-                  >Menampilkan {{ filteredPOs.length }} PO</span
-                >
+              <div class="section-heading">
+                <div>
+                  <h2 class="section-title">Penempatan rak &amp; fisik karton</h2>
+                  <p class="section-copy">Pilih kartu PO untuk mencatat rak, karton masuk, atau melihat detail.</p>
+                </div>
+                <span class="section-count">{{ filteredPOs.length }} PO</span>
               </div>
 
               <!-- SKELETON LOADER KETIKA MEMUAT DATA -->
               <skeleton-loader v-if="isLoading"></skeleton-loader>
 
               <!-- KONDISI KETIKA DATA KOSONG -->
-              <div
-                v-else-if="filteredPOs.length === 0"
-                class="bg-white dark:bg-ink-800 rounded-2xl p-12 text-center border border-ink-200 dark:border-ink-600 shadow-sm"
-              >
-                <p class="tag border-2 text-ink-400 inline-flex mb-3">KOSONG</p>
-                <p class="text-ink-600 dark:text-ink-300 font-semibold">
-                  Tidak ada PO yang ditemukan
+              <div v-else-if="filteredPOs.length === 0" class="empty-state">
+                <span class="empty-state__mark" aria-hidden="true">∅</span>
+                <p class="empty-state__title">Tidak ada PO yang ditemukan</p>
+                <p class="empty-state__copy">
+                  Coba ubah kata kunci pencarian atau filter buyer Anda.
                 </p>
-                <p class="text-xs text-ink-400 mt-1">
-                  Coba sesuaikan kata kunci pencarian atau filter Buyer Anda.
-                </p>
+                <button v-if="hasActiveFilters" type="button" @click="resetFilters" class="btn-secondary">
+                  Reset filter
+                </button>
               </div>
 
               <!-- GRID DATA ASLI -->
-              <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div v-else class="po-grid">
                 <po-card
                   v-for="po in filteredPOs"
                   :key="po.id"
@@ -250,82 +261,38 @@
               </div>
             </div>
 
-            <!-- TAB 2: ADMIN RECORD DASHBOARD -->
+            <!-- TAB 2: ADMIN CONSOLE -->
             <div v-if="activeTab === 'admin'" class="space-y-4">
               <!-- ===== NAVIGASI SUB-TAB ADMIN ===== -->
-              <div
-                class="no-print -mx-4 sm:mx-0 overflow-x-auto pb-2 mb-2 scrollbar-hide"
-              >
-                <div class="flex gap-2 px-4 sm:px-0 w-max">
-                  <button
-                    @click="adminSubTab = 'active'"
-                    :class="adminSubTab === 'active' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
-                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
-                  >
-                    Active
-                    <span
-                      :class="adminSubTab === 'active' ? 'bg-indigo-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
-                      class="px-1.5 py-0.5 rounded text-[10px]"
-                    >
-                      {{ activePOsCount || 0 }}
-                    </span>
-                  </button>
-                  <button
-                    @click="adminSubTab = 'overdue'"
-                    :class="adminSubTab === 'overdue' ? 'bg-alarm-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
-                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
-                  >
-                    Overdue
-                    <span
-                      :class="adminSubTab === 'overdue' ? 'bg-alarm-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
-                      class="px-1.5 py-0.5 rounded text-[10px]"
-                    >
-                      {{ overduePOsCount || 0 }}
-                    </span>
-                  </button>
-                  <button
-                    @click="adminSubTab = 'shipped'"
-                    :class="adminSubTab === 'shipped' ? 'bg-stamp-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
-                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
-                  >
-                    Shipped
-                    <span
-                      :class="adminSubTab === 'shipped' ? 'bg-stamp-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
-                      class="px-1.5 py-0.5 rounded text-[10px]"
-                    >
-                      {{ shippedPOsCount || 0 }}
-                    </span>
-                  </button>
-                  <button
-                    @click="adminSubTab = 'archive'"
-                    :class="adminSubTab === 'archive' ? 'bg-ink-600 text-white shadow-md' : 'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-600 hover:bg-ink-50 dark:hover:bg-ink-700'"
-                    class="px-4 py-2.5 rounded-xl font-bold font-mono text-[11px] uppercase tracking-wider transition-all flex items-center gap-2"
-                  >
-                    Archive
-                    <span
-                      :class="adminSubTab === 'archive' ? 'bg-ink-500' : 'bg-ink-200 dark:bg-ink-700 text-ink-600 dark:text-ink-400'"
-                      class="px-1.5 py-0.5 rounded text-[10px]"
-                    >
-                      {{ archivedPOsCount || 0 }}
-                    </span>
-                  </button>
-                </div>
+              <div class="subtab-bar no-print" role="tablist" aria-label="Kategori PO">
+                <button type="button" role="tab" :aria-selected="adminSubTab === 'active'" @click="adminSubTab = 'active'" :class="['subtab', { 'is-active': adminSubTab === 'active' }]">
+                  <span>Active</span><span class="subtab__count">{{ activePOsCount || 0 }}</span>
+                </button>
+                <button type="button" role="tab" :aria-selected="adminSubTab === 'overdue'" @click="adminSubTab = 'overdue'" :class="['subtab', 'subtab--danger', { 'is-active': adminSubTab === 'overdue' }]">
+                  <span>Overdue</span><span class="subtab__count">{{ overduePOsCount || 0 }}</span>
+                </button>
+                <button type="button" role="tab" :aria-selected="adminSubTab === 'shipped'" @click="adminSubTab = 'shipped'" :class="['subtab', 'subtab--success', { 'is-active': adminSubTab === 'shipped' }]">
+                  <span>Shipped</span><span class="subtab__count">{{ shippedPOsCount || 0 }}</span>
+                </button>
+                <button type="button" role="tab" :aria-selected="adminSubTab === 'archive'" @click="adminSubTab = 'archive'" :class="['subtab', { 'is-active': adminSubTab === 'archive' }]">
+                  <span>Archive</span><span class="subtab__count">{{ archivedPOsCount || 0 }}</span>
+                </button>
               </div>
               <!-- =================================== -->
 
-              <div class="flex justify-between items-center no-print">
-                <span class="text-xs font-semibold text-ink-500 dark:text-ink-400">
-                  Data Master Purchase Order
-                </span>
+              <div class="table-heading no-print">
+                <div>
+                  <h2 class="section-title">Master purchase order</h2>
+                  <p class="section-copy">{{ filteredPOs.length }} record pada kategori ini.</p>
+                </div>
                 <button
+                  v-if="isAdmin"
                   type="button"
                   @click="showBulkUploadModal = true"
-                  class="flex items-center gap-1.5 text-xs bg-hazard-600 hover:bg-hazard-700 text-white px-3.5 py-2 rounded-xl font-bold shadow-xs hover:shadow-md transition active:scale-[0.98] cursor-pointer"
+                  class="btn-primary"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                  </svg>
-                  <span>Upload Massal PO</span>
+                  <span aria-hidden="true">↑</span>
+                  <span>Upload massal</span>
                 </button>
               </div>
 
@@ -350,6 +317,7 @@
 
       <!-- MODALS -->
       <inspection-modal
+        v-if="isAdmin"
         :show="showInspectionModal"
         :inspection-form="inspectionForm"
         @close="showInspectionModal = false"
@@ -357,6 +325,7 @@
       ></inspection-modal>
 
       <logo-modal
+        v-if="isAdmin"
         :show="showLogoModal"
         :buyers="buyers"
         @close="showLogoModal = false"
@@ -364,6 +333,7 @@
       ></logo-modal>
 
       <edit-modal
+        v-if="isAdmin"
         :show="showEditModal"
         :buyers="buyers"
         :edit-form="editForm"
@@ -381,6 +351,7 @@
       ></placement-modal>
 
       <audit-trail-modal
+        v-if="isAdmin"
         :show="showAuditTrailModal"
         @close="showAuditTrailModal = false"
       ></audit-trail-modal>
@@ -417,11 +388,13 @@
       ></login-modal>
 
       <user-management-modal
+        v-if="isAdmin"
         :show="showUserModal"
         @close="showUserModal = false"
       ></user-management-modal>
 
       <bulk-upload-modal
+        v-if="isAdmin"
         :show="showBulkUploadModal"
         :existing-po-numbers="existingPoNumbers"
         @close="showBulkUploadModal = false"

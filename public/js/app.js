@@ -63,22 +63,33 @@ const app = createApp({
     const showAuditTrailModal = ref(false);
     const showBulkUploadModal = ref(false);
 
+    // Hak tampilan berbasis role. Logika API tetap tidak diubah.
+    const isAdmin = computed(
+      () => String(currentUser.value?.role || "").toLowerCase() === "admin",
+    );
+
     const logout = () => {
       localStorage.removeItem("gcwh_token");
       localStorage.removeItem("gcwh_user");
       currentUser.value = null;
-      showLoginModal.value = true;
+      window.location.href = "./login.html";
     };
 
     const onLoginSuccess = (user) => {
       currentUser.value = user;
       showLoginModal.value = false;
+      activeTab.value =
+        String(user?.role || "").toLowerCase() === "admin" ? "admin" : "helper";
       fetchData();
     };
 
     // State Aplikasi Utama & Tab Logic
     const isDarkMode = ref(localStorage.getItem("theme") === "dark");
-    const activeTab = ref("admin"); // 'admin' | 'helper'
+    const activeTab = ref(
+      String(currentUser.value?.role || "").toLowerCase() === "admin"
+        ? "admin"
+        : "helper",
+    ); // Admin bebas berpindah, helper terkunci di halaman helper
     const adminSubTab = ref("active"); // 'active' | 'overdue' | 'shipped' | 'archive'
     const isLoading = ref(true);
     const items = ref([]);
@@ -169,13 +180,11 @@ const app = createApp({
     // Toggle Dark & Light Mode
     const toggleTheme = () => {
       isDarkMode.value = !isDarkMode.value;
-      if (isDarkMode.value) {
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem("theme", "light");
-      }
+      const nextTheme = isDarkMode.value ? "dark" : "light";
+      document.documentElement.classList.toggle("dark", isDarkMode.value);
+      localStorage.setItem("theme", nextTheme);
+      const schemeMeta = document.querySelector('meta[name="color-scheme"]');
+      if (schemeMeta) schemeMeta.setAttribute("content", nextTheme);
     };
 
     // API Data Fetching dengan State Loading
@@ -1442,6 +1451,7 @@ const app = createApp({
 
     return {
       currentUser,
+      isAdmin,
       showLoginModal,
       showUserModal,
       showAuditTrailModal,

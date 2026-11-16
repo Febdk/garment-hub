@@ -70,6 +70,7 @@ export default {
               <button
                 type="button"
                 @click="showPassword = !showPassword"
+                aria-label="Tampilkan atau sembunyikan password"
                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-400 hover:text-ink-600 dark:hover:text-ink-200 transition"
                 tabindex="-1"
               >
@@ -99,7 +100,7 @@ export default {
 
         <div class="pt-3 border-t border-ink-100 dark:border-ink-700/60 flex items-center justify-between text-[11px] text-ink-500 dark:text-ink-400">
           <span>🔒 Akses Terenkripsi JWT</span>
-          <a href="/login.html" class="text-hazard-600 dark:text-hazard-400 hover:underline font-semibold">
+          <a href="./login.html" class="text-hazard-600 dark:text-hazard-400 hover:underline font-semibold">
             Buka Halaman Penuh &rarr;
           </a>
         </div>
