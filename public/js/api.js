@@ -1,15 +1,6 @@
 // ── API Client dengan JWT Authorization Header ─────────────────────
-// Di hosting statis seperti garment-hub.eformku.id atau Netlify, wajib arahkan ke Backend Railway.
-// Hanya gunakan path relatif ("") jika berjalan langsung di port Express lokal (3000).
-const isLocalExpress =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1") &&
-  window.location.port === "3000";
-
-const API_BASE_URL = isLocalExpress
-  ? ""
-  : "https://garment-hub-production-c0a6.up.railway.app";
+// Ganti URL di bawah ini dengan Domain Railway Backend kamu
+const API_BASE_URL = "https://garment-hub-production-c0a6.up.railway.app";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("gcwh_token");

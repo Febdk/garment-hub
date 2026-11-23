@@ -191,8 +191,6 @@ CREATE TABLE `purchase_orders` (
   `style_code` varchar(100) NOT NULL,
   `color_code` varchar(100) DEFAULT NULL,
   `total_qty` int(11) DEFAULT 0,
-  `qty_in` int(11) NOT NULL DEFAULT 0,
-  `qty_out` int(11) NOT NULL DEFAULT 0,
   `ex_fty_date` date NOT NULL,
   `status` varchar(50) DEFAULT 'Pending (Belum Dicek)',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -209,10 +207,10 @@ CREATE TABLE `purchase_orders` (
 -- Dumping data untuk tabel `purchase_orders`
 --
 
-INSERT INTO `purchase_orders` (`id`, `buyer`, `po_number`, `style_code`, `color_code`, `total_qty`, `qty_in`, `qty_out`, `ex_fty_date`, `status`, `created_at`, `inspection_internal_by`, `inspection_internal_at`, `inspection_external_by`, `inspection_external_at`, `revised_ex_fty_date`, `shipment_note`, `buyer_logo`) VALUES
-(6, 'Polo Ralph Lauren', '4702177521', '710966474', '', 0, 0, 0, '2026-10-04', 'Pending', '2026-09-26 12:13:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 'Polo Ralph Lauren', '4702177522', '710974534', '', 0, 0, 0, '2026-10-01', 'Inspection External', '2026-09-26 12:15:27', NULL, NULL, 'QIMA', '2026-09-29 10:36:00', '2026-10-04', NULL, 'http://eformku.id//uploads/logo-bren/1790426380_id1DA_YLZo_1790425674300.webp'),
-(17, 'Dillard\'s', '232', '211', '', 0, 0, 0, '2026-10-01', 'Pending', '2026-09-29 17:20:08', NULL, NULL, NULL, NULL, NULL, NULL, 'https://eformku.id//uploads/logo-bren/1790426770_idUNmgk3mT_1790426721958.webp');
+INSERT INTO `purchase_orders` (`id`, `buyer`, `po_number`, `style_code`, `color_code`, `total_qty`, `ex_fty_date`, `status`, `created_at`, `inspection_internal_by`, `inspection_internal_at`, `inspection_external_by`, `inspection_external_at`, `revised_ex_fty_date`, `shipment_note`, `buyer_logo`) VALUES
+(6, 'Polo Ralph Lauren', '4702177521', '710966474', '', 0, '2026-10-04', 'Pending', '2026-09-26 12:13:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 'Polo Ralph Lauren', '4702177522', '710974534', '', 0, '2026-10-01', 'Inspection External', '2026-09-26 12:15:27', NULL, NULL, 'QIMA', '2026-09-29 10:36:00', '2026-10-04', NULL, 'http://eformku.id//uploads/logo-bren/1790426380_id1DA_YLZo_1790425674300.webp'),
+(17, 'Dillard\'s', '232', '211', '', 0, '2026-10-01', 'Pending', '2026-09-29 17:20:08', NULL, NULL, NULL, NULL, NULL, NULL, 'https://eformku.id//uploads/logo-bren/1790426770_idUNmgk3mT_1790426721958.webp');
 
 -- --------------------------------------------------------
 

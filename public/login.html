@@ -619,13 +619,11 @@
 
         setLoading(true);
 
-        // Prioritaskan Backend Railway jika diakses dari domain frontend (garment-hub.eformku.id / netlify)
-        const isLocalExpress =
-          (window.location.hostname === "localhost" ||
-            window.location.hostname === "127.0.0.1") &&
-          window.location.port === "3000";
-
-        const endpoints = isLocalExpress
+        // Fallback multi-endpoint (Local Express / Railway Production)
+        const isLocal =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1";
+        const endpoints = isLocal
           ? [
               "/api/login",
               "https://garment-hub-production-c0a6.up.railway.app/api/login",
