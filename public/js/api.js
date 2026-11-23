@@ -1,6 +1,14 @@
 // ── API Client dengan JWT Authorization Header ─────────────────────
-// Ganti URL di bawah ini dengan Domain Railway Backend kamu
-const API_BASE_URL = "https://garment-hub-production-c0a6.up.railway.app";
+// Otomatis deteksi: jika diakses dari domain/server sendiri (Express melayani /public), gunakan path relatif ("").
+// Jika diakses dari hosting statis terpisah (Netlify / dev server port 5500), tetap arahkan ke Railway.
+const isSeparateStaticHost =
+  typeof window !== "undefined" &&
+  (window.location.hostname.includes("netlify.app") ||
+    window.location.port === "5500");
+
+const API_BASE_URL = isSeparateStaticHost
+  ? "https://garment-hub-production-c0a6.up.railway.app"
+  : "";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("gcwh_token");

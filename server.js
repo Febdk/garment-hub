@@ -916,96 +916,120 @@ app.get("/api/verify-token", authenticateToken, (req, res) => {
 // API TRACKING KARTON (GARMENT HUB V6)
 // =========================================================================
 
-// 1. Catat Karton Masuk (Update PO Global + Update po_colors Spesifik)
+// 1. Catat Karton Masuk (Update PO Global + Update po_colors Spesifik dengan Transaksi Aman)
 app.post("/api/cartons/in", authenticateToken, async (req, res) => {
   const { po_id, color_id, quantity, notes } = req.body;
-  const recorded_by = req.user.id;
+  const numQty = parseInt(quantity, 10);
 
-  if (!po_id || !quantity) {
-    return res.status(400).json({ error: "po_id dan quantity wajib diisi" });
+  if (!po_id || isNaN(numQty) || numQty <= 0) {
+    return res
+      .status(400)
+      .json({ error: "po_id dan quantity valid (> 0) wajib diisi" });
   }
 
+  const recorded_by = req.user?.id || null;
+  const conn = await pool.promise().getConnection();
+
   try {
+    await conn.beginTransaction();
+
     // 1. Update total qty_in di tabel purchase_orders
-    await db.query(
+    await conn.query(
       "UPDATE purchase_orders SET qty_in = qty_in + ? WHERE id = ?",
-      [quantity, po_id],
+      [numQty, po_id],
     );
 
     // 2. Update carton_qty di tabel po_colors secara spesifik jika color_id dikirim
     if (color_id) {
-      await db.query(
+      await conn.query(
         "UPDATE po_colors SET carton_qty = carton_qty + ? WHERE id = ?",
-        [quantity, color_id],
+        [numQty, color_id],
       );
     }
 
     // 3. Rekam jejak di carton_movements
-    await db.query(
+    await conn.query(
       "INSERT INTO carton_movements (po_id, type, quantity, reason, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?)",
-      [po_id, "IN", quantity, "Karton Masuk", notes || "", recorded_by || null],
+      [po_id, "IN", numQty, "Karton Masuk", notes || "", recorded_by],
     );
+
+    await conn.commit();
 
     await recordLog(
       req.user.username,
       "CARTON_IN",
-      `Mencatat ${quantity} karton masuk untuk PO ID #${po_id}${color_id ? ` (Color ID #${color_id})` : ""}`,
+      `Mencatat ${numQty} karton masuk untuk PO ID #${po_id}${color_id ? ` (Color ID #${color_id})` : ""}`,
     );
 
     res.json({ success: true, message: "Karton masuk berhasil dicatat" });
   } catch (err) {
+    await conn.rollback();
     console.error("Error carton in:", err);
     res.status(500).json({ error: "Gagal mencatat karton masuk" });
+  } finally {
+    conn.release();
   }
 });
 
-// 2. Catat Karton Keluar (Update PO Global + Update po_colors Spesifik)
+// 2. Catat Karton Keluar (Update PO Global + Update po_colors Spesifik dengan Transaksi Aman)
 app.post("/api/cartons/out", authenticateToken, async (req, res) => {
   const { po_id, color_id, quantity, reason, notes } = req.body;
-  const recorded_by = req.user.id;
+  const numQty = parseInt(quantity, 10);
 
-  if (!po_id || !quantity) {
-    return res.status(400).json({ error: "po_id dan quantity wajib diisi" });
+  if (!po_id || isNaN(numQty) || numQty <= 0) {
+    return res
+      .status(400)
+      .json({ error: "po_id dan quantity valid (> 0) wajib diisi" });
   }
 
+  const recorded_by = req.user?.id || null;
+  const conn = await pool.promise().getConnection();
+
   try {
+    await conn.beginTransaction();
+
     // 1. Update total qty_out di tabel purchase_orders
-    await db.query(
+    await conn.query(
       "UPDATE purchase_orders SET qty_out = qty_out + ? WHERE id = ?",
-      [quantity, po_id],
+      [numQty, po_id],
     );
 
     // 2. Kurangi carton_qty di tabel po_colors secara spesifik jika color_id dikirim
     if (color_id) {
-      await db.query(
+      await conn.query(
         "UPDATE po_colors SET carton_qty = GREATEST(0, carton_qty - ?) WHERE id = ?",
-        [quantity, color_id],
+        [numQty, color_id],
       );
     }
 
     // 3. Rekam jejak di carton_movements
-    await db.query(
+    await conn.query(
       "INSERT INTO carton_movements (po_id, type, quantity, reason, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?)",
       [
         po_id,
         "OUT",
-        quantity,
+        numQty,
         reason || "Karton Keluar",
         notes || "",
-        recorded_by || null,
+        recorded_by,
       ],
     );
+
+    await conn.commit();
 
     await recordLog(
       req.user.username,
       "CARTON_OUT",
-      `Mencatat ${quantity} karton keluar untuk PO ID #${po_id}${color_id ? ` (Color ID #${color_id})` : ""}`,
+      `Mencatat ${numQty} karton keluar untuk PO ID #${po_id}${color_id ? ` (Color ID #${color_id})` : ""}`,
     );
 
     res.json({ success: true, message: "Karton keluar berhasil dicatat" });
   } catch (err) {
+    await conn.rollback();
     console.error("Error carton out:", err);
     res.status(500).json({ error: "Gagal mencatat karton keluar" });
+  } finally {
+    conn.release();
   }
 });
 
