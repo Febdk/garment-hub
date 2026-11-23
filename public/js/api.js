@@ -1,14 +1,15 @@
 // ── API Client dengan JWT Authorization Header ─────────────────────
-// Otomatis deteksi: jika diakses dari domain/server sendiri (Express melayani /public), gunakan path relatif ("").
-// Jika diakses dari hosting statis terpisah (Netlify / dev server port 5500), tetap arahkan ke Railway.
-const isSeparateStaticHost =
+// Di hosting statis seperti garment-hub.eformku.id atau Netlify, wajib arahkan ke Backend Railway.
+// Hanya gunakan path relatif ("") jika berjalan langsung di port Express lokal (3000).
+const isLocalExpress =
   typeof window !== "undefined" &&
-  (window.location.hostname.includes("netlify.app") ||
-    window.location.port === "5500");
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1") &&
+  window.location.port === "3000";
 
-const API_BASE_URL = isSeparateStaticHost
-  ? "https://garment-hub-production-c0a6.up.railway.app"
-  : "";
+const API_BASE_URL = isLocalExpress
+  ? ""
+  : "https://garment-hub-production-c0a6.up.railway.app";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("gcwh_token");

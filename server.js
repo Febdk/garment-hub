@@ -31,6 +31,8 @@ app.use(
         connectSrc: [
           "'self'",
           "https://garment-hub-production-c0a6.up.railway.app",
+          "https://garment-hub.eformku.id",
+          "https://*.eformku.id",
         ],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
@@ -75,6 +77,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       "http://localhost:3000",
       "http://127.0.0.1:3000",
       "https://garment-hub.netlify.app",
+      "https://garment-hub.eformku.id",
+      "http://garment-hub.eformku.id",
     ];
 
 app.use(
@@ -83,7 +87,9 @@ app.use(
       if (!origin) return callback(null, true);
       if (
         allowedOrigins.indexOf(origin) !== -1 ||
-        allowedOrigins.includes("*")
+        allowedOrigins.includes("*") ||
+        origin.endsWith(".eformku.id") ||
+        origin.endsWith(".netlify.app")
       ) {
         return callback(null, true);
       }
