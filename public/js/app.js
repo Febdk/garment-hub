@@ -1136,7 +1136,7 @@ const app = createApp({
   <div class="kop-wrapper">
     <div class="kop-brand">
       <div class="kop-logo">
-        <img src="./asset/emoon-industrial.webp" alt="Emoon Industrial" />
+        <img src="./asset/logo-pt-ungaran-sari-garment" alt="Pt Ungaran Sari Garment" />
       </div>
       <div class="kop-company">
         <h1>PT. UNGARAN SARI GARMENT</h1>
