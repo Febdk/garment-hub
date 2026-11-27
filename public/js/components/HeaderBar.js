@@ -39,7 +39,9 @@ export default {
       <div class="app-header__inner">
         <!-- Brand Lockup -->
         <div class="brand-lockup">
-          <div class="brand-mark" aria-hidden="true">GC</div>
+          <div class="brand-mark" aria-hidden="true">
+            <img src="./asset/emoon-industrial.webp" alt="Emoon Industrial" class="w-full h-full object-contain rounded-[inherit]" />
+          </div>
           <div class="brand-copy">
             <div class="brand-name">GCWH Garment Hub</div>
             <div class="brand-subtitle hidden sm:block">Warehouse operations console</div>

@@ -19,8 +19,8 @@ export default {
     <div v-if="show" class="fixed inset-0 bg-ink-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div class="bg-white dark:bg-ink-800 rounded-2xl max-w-sm w-full p-6 sm:p-7 shadow-2xl border border-ink-200/80 dark:border-ink-700 space-y-5 transition-all">
         <div class="text-center space-y-1.5">
-          <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-hazard-600 text-white font-bold text-lg shadow-sm mb-1">
-            GC
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-ink-200 dark:border-ink-700 p-2 shadow-sm mb-1">
+            <img src="./asset/emoon-industrial.webp" alt="Emoon Industrial" class="w-full h-full object-contain" />
           </div>
           <h3 class="text-xl font-bold tracking-tight text-ink-900 dark:text-white">
             Login GCWH Gudang

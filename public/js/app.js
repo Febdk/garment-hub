@@ -890,19 +890,21 @@ const app = createApp({
       gap: 12px;
     }
     .kop-logo {
-      width: 44px;
-      height: 44px;
-      background: #0f2744;
+      width: 48px;
+      height: 48px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
-      font-size: 19px;
-      font-weight: 900;
-      letter-spacing: -1px;
-      font-family: "Segoe UI", Arial, sans-serif;
-      box-shadow: 0 2px 4px rgba(15, 39, 68, 0.2);
+      padding: 3px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    .kop-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
     .kop-company h1 {
       font-size: 15px;
@@ -1133,7 +1135,9 @@ const app = createApp({
   <!-- ── 1. KOP SURAT RESMI PT ── -->
   <div class="kop-wrapper">
     <div class="kop-brand">
-      <div class="kop-logo">GC</div>
+      <div class="kop-logo">
+        <img src="./asset/emoon-industrial.webp" alt="Emoon Industrial" />
+      </div>
       <div class="kop-company">
         <h1>PT. UNGARAN SARI GARMENT</h1>
         <h2>Warehouse, Finishing &amp; Multi-Buyer Logistics Hub</h2>
