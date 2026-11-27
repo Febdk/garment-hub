@@ -6,7 +6,7 @@ export default {
   },
   emits: ["toggle-urgent"],
   template: `
-    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="Ringkasan operasional">
+    <section class="stats-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="Ringkasan operasional">
       <article class="metric-card">
         <div class="metric-card__icon metric-card__icon--blue" aria-hidden="true">PO</div>
         <div class="metric-card__content">
