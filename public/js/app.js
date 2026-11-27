@@ -887,44 +887,13 @@ const app = createApp({
     .kop-brand {
       display: flex;
       align-items: center;
-      gap: 12px;
     }
-    .kop-logo {
-      width: 48px;
-      height: 48px;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    }
-    .kop-logo img {
-      width: 100%;
-      height: 100%;
+    .kop-brand img {
+      height: 52px;
+      width: auto;
+      max-width: 280px;
       object-fit: contain;
-    }
-    .kop-company h1 {
-      font-size: 15px;
-      font-weight: 900;
-      color: #0f2744;
-      letter-spacing: 0.3px;
-      text-transform: uppercase;
-      margin-bottom: 2px;
-    }
-    .kop-company h2 {
-      font-size: 10px;
-      font-weight: 700;
-      color: #2563eb;
-      letter-spacing: 0.2px;
-      text-transform: uppercase;
-    }
-    .kop-company p {
-      font-size: 8.5px;
-      color: #64748b;
-      margin-top: 2px;
+      display: block;
     }
 
     /* ── KOTAK DOKUMEN KONTROL RESMI ── */
@@ -1135,14 +1104,7 @@ const app = createApp({
   <!-- ── 1. KOP SURAT RESMI PT ── -->
   <div class="kop-wrapper">
     <div class="kop-brand">
-      <div class="kop-logo">
-        <img src="./asset/logo-pt-ungaran-sari-garment" alt="Pt Ungaran Sari Garment" />
-      </div>
-      <div class="kop-company">
-        <h1>PT. UNGARAN SARI GARMENT</h1>
-        <h2>Warehouse, Finishing &amp; Multi-Buyer Logistics Hub</h2>
-        <p>Kawasan Industri Manufaktur Garment | Dokumen Internal Resmi Pergudangan</p>
-      </div>
+      <img src="./asset/logo-pt-ungaran-sari-garment.png" alt="PT. UNGARAN SARI GARMENT" />
     </div>
     <div class="kop-control">
       <table>
